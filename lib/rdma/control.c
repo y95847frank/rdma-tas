@@ -51,7 +51,7 @@ int rdma_init(void)
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    if (flextcp_context_create(&appctx) != 0)
+    if (flextcp_context_create(appctx) != 0)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
@@ -103,9 +103,9 @@ int rdma_listen(const struct sockaddr_in* localaddr, int backlog)
     }
 
     // 5. Block until TAS Slowpath processes the request
-    flextcp_event ev;
+    struct flextcp_event ev;
     int ret;
-    memset(&ev, 0, sizeof(flextcp_event));
+    memset(&ev, 0, sizeof(struct flextcp_event));
     while (1)
     {
         ret = flextcp_context_poll(appctx, 1, &ev);
@@ -164,7 +164,7 @@ int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr)
     }
 
     // 3. accept() IPC to TAS Slowpath
-    if (flextcp_listen_accept(appctx, ls, &s->c) != 0)
+    if (flextcp_listen_accept(appctx, &ls->l, &s->c) != 0)
     {
         free(s);
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -172,9 +172,9 @@ int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr)
     }
 
     // 4. Block until TAS Slowpath processes the request
-    flextcp_event ev;
+    struct flextcp_event ev;
     int ret;
-    memset(&ev, 0, sizeof(flextcp_event));
+    memset(&ev, 0, sizeof(struct flextcp_event));
     while (1)
     {
         ret = flextcp_context_poll(appctx, 1, &ev);
@@ -242,9 +242,9 @@ int rdma_connect(const struct sockaddr_in* remoteaddr)
     }
 
     // 4. Block until TAS Slowpath processes the request
-    flextcp_event ev;
+    struct flextcp_event ev;
     int ret;
-    memset(&ev, 0, sizeof(flextcp_event));
+    memset(&ev, 0, sizeof(struct flextcp_event));
     while (1)
     {
         ret = flextcp_context_poll(appctx, 1, &ev);

@@ -12,8 +12,8 @@ enum {
 
 struct socket{
     union {
-        flextcp_connection c;
-        flextcp_listener l;
+        struct flextcp_connection c;
+        struct flextcp_listener l;
     };
     uint8_t type;
 };

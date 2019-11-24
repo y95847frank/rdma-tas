@@ -38,7 +38,9 @@ STACK_OBJS = $(addprefix lib/tas/,init.o kernel.o conn.o connect.o)
 SOCKETS_OBJS = $(addprefix lib/sockets/,control.o transfer.o context.o manage_fd.o \
 	epoll.o libc.o)
 INTERPOSE_OBJS = $(addprefix lib/sockets/,interpose.o)
-CFLAGS += -I. -Ilib/tas/include -Ilib/sockets/include
+RDMA_OBJS = $(addprefix lib/rdma/,control.o dataops.o)
+
+CFLAGS += -I. -Ilib/tas/include -Ilib/rdma/include
 
 shared_objs = $(patsubst %.o,%.shared.o,$(1))
 
@@ -66,8 +68,7 @@ TESTS= \
 	$(TESTS_AUTO_FULL)
 
 
-all: lib/libtas_sockets.so lib/libtas_interpose.so \
-	lib/libtas.so \
+all: lib/libtas_rdma.so lib/libtas.so \
 	tools/tracetool tools/statetool tools/scaletool \
 	tas/tas
 
@@ -95,21 +96,12 @@ flexnic/tests/tcp_common: flexnic/tests/tcp_common.o
 tests/lowlevel: tests/lowlevel.o lib/libtas.so
 tests/lowlevel_echo: tests/lowlevel_echo.o lib/libtas.so
 
-tests/usocket_accept: tests/usocket_accept.o lib/libtas_sockets.so
-tests/usocket_connect: tests/usocket_connect.o lib/libtas_sockets.so
-tests/usocket_accrx: tests/usocket_accrx.o lib/libtas_sockets.so
-tests/usocket_conntx: tests/usocket_conntx.o lib/libtas_sockets.so
-tests/usocket_conntx_large: tests/usocket_conntx_large.o \
-	lib/libtas_sockets.so
-tests/usocket_move: tests/usocket_move.o lib/libtas_sockets.so
 tests/usocket_epoll_eof: tests/usocket_epoll_eof.o
 tests/usocket_shutdown: tests/usocket_shutdown.o
 tests/bench_ll_echo: tests/bench_ll_echo.o lib/libtas.so
 
 tests/libtas/tas_ll: tests/libtas/tas_ll.o tests/libtas/harness.o \
 	tests/libtas/harness.o tests/testutils.o lib/libtas.so
-tests/libtas/tas_sockets: tests/libtas/tas_sockets.o tests/libtas/harness.o \
-	tests/libtas/harness.o tests/testutils.o lib/libtas_sockets.so
 
 tests/tas_unit/%.o: CFLAGS+=-Itas/include
 tests/tas_unit/fastpath: LDLIBS+=-lrte_eal
@@ -123,11 +115,8 @@ tools/tracetool: tools/tracetool.o
 tools/statetool: tools/statetool.o lib/libtas.so
 tools/scaletool: tools/scaletool.o lib/libtas.so
 
-lib/libtas_sockets.so: $(call shared_objs, \
-	$(SOCKETS_OBJS) $(STACK_OBJS) $(UTILS_OBJS))
-
-lib/libtas_interpose.so: $(call shared_objs, \
-	$(INTERPOSE_OBJS) $(SOCKETS_OBJS) $(STACK_OBJS) $(UTILS_OBJS))
+lib/libtas_rdma.so: $(call shared_objs, \
+	$(RDMA_OBJS) $(STACK_OBJS) $(UTILS_OBJS))
 
 lib/libtas.so: $(call shared_objs, $(UTILS_OBJS) $(STACK_OBJS))
 
@@ -141,27 +130,24 @@ lib/libtas.so: $(call shared_objs, $(UTILS_OBJS) $(STACK_OBJS))
 clean:
 	rm -f *.o tas/*.o tas/fast/*.o tas/slow/*.o lib/utils/*.o \
 	  lib/tas/*.o lib/sockets/*.o tests/*.o tests/*/*.o tools/*.o \
-	  lib/libtas_sockets.so lib/libtas_interpose.so \
+	  lib/libtas_rdma.so \
 	  lib/libtas.so \
 	  $(TESTS) \
 	  tools/tracetool tools/statetool tools/scaletool \
 	  tas/tas
 
-install: tas/tas lib/libtas_sockets.so lib/libtas_interpose.so \
-  lib/libtas.so tools/statetool
+install: tas/tas lib/libtas_rdam.so lib/libtas.so tools/statetool
 	mkdir -p $(DESTDIR)$(SBINDIR)
 	cp tas/tas $(DESTDIR)$(SBINDIR)/tas
 	cp tools/statetool $(DESTDIR)$(SBINDIR)/tas-statetool
 	mkdir -p $(DESTDIR)$(LIBDIR)
-	cp lib/libtas_interpose.so $(DESTDIR)$(LIBDIR)/libtas_interpose.so
-	cp lib/libtas_sockets.so $(DESTDIR)$(LIBDIR)/libtas_sockets.so
+	cp lib/libtas_rdma.so $(DESTDIR)$(LIBDIR)/libtas_rdma.so
 	cp lib/libtas.so $(DESTDIR)$(LIBDIR)/libtas.so
 
 uninstall:
 	rm -f $(DESTDIR)$(SBINDIR)/tas
 	rm -f $(DESTDIR)$(SBINDIR)/tas-statetool
-	rm -f $(DESTDIR)$(LIBDIR)/libtas_interpose.so
-	rm -f $(DESTDIR)$(LIBDIR)/libtas_sockets.so
+	rm -f $(DESTDIR)$(LIBDIR)/libtas_rdma.so
 	rm -f $(DESTDIR)$(LIBDIR)/libtas.so
 
 .PHONY: all tests clean docs install uninstall run-tests

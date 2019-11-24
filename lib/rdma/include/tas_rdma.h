@@ -33,8 +33,8 @@ enum rdma_op_status_e {
  */
 struct rdma_wc_event {
     int id;  /**> Operation ID returned in RDMA read()/write() call */
-    rdma_op_type_e type;
-    rdma_op_status_e status;
+    enum rdma_op_type_e type;
+    enum rdma_op_status_e status;
 };
 
 /**
@@ -140,6 +140,6 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
  *                Returns immediately if 0.
  * @return SUCCESS/FAILURE. If successful, completion event is copied to *ev*.
  */
-int rdma_poll_event(int fd, rdma_wc_event* ev, uint32_t timeout);
+int rdma_poll_event(int fd, struct rdma_wc_event* ev, uint32_t timeout);
 
 #endif /* FLEXTCP_RDMA_H_ */
