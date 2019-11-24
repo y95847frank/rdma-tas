@@ -171,7 +171,10 @@ static int kernel_poll(struct flextcp_context *ctx, int num,
       j = event_kappin_conn_opened(&kout->data.conn_opened, &events[i],
           num - i);
     } else if (type == KERNEL_APPIN_LISTEN_NEWCONN) {
-      event_kappin_listen_newconn(&kout->data.listen_newconn, &events[i]);
+      /* Do not notify on new connection.
+        Control plane is synchronous in RDMA */
+      // event_kappin_listen_newconn(&kout->data.listen_newconn, &events[i]);
+      j = 0;
     } else if (type == KERNEL_APPIN_ACCEPTED_CONN) {
       j = event_kappin_accept_conn(&kout->data.accept_connection, &events[i],
           num - i);
@@ -478,7 +481,7 @@ static int fastpath_poll_vec(struct flextcp_context *ctx, int num,
   return 0;
 }
 
-
+// TODO: Fastpath need not be polled at all!
 int flextcp_context_poll(struct flextcp_context *ctx, int num,
     struct flextcp_event *events)
 {
