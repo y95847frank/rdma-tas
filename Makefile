@@ -46,7 +46,6 @@ shared_objs = $(patsubst %.o,%.shared.o,$(1))
 
 TESTS_AUTO= \
 	tests/libtas/tas_ll \
-	tests/libtas/tas_sockets \
 	tests/tas_unit/fastpath \
 
 TESTS_AUTO_FULL= \
@@ -55,15 +54,9 @@ TESTS_AUTO_FULL= \
 TESTS= \
 	tests/lowlevel \
 	tests/lowlevel_echo \
-	tests/usocket_accept \
-	tests/usocket_connect \
-	tests/usocket_accrx \
-	tests/usocket_conntx \
-	tests/usocket_conntx_large \
-	tests/usocket_move \
-	tests/usocket_epoll_eof \
-	tests/usocket_shutdown \
 	tests/bench_ll_echo \
+	tests/rdma_client \
+	tests/rdma_server \
 	$(TESTS_AUTO) \
 	$(TESTS_AUTO_FULL)
 
@@ -77,7 +70,6 @@ tests: $(TESTS)
 # run all simple testcases
 run-tests: $(TESTS_AUTO)
 	tests/libtas/tas_ll
-	tests/libtas/tas_sockets
 	tests/tas_unit/fastpath
 
 # run full tests that run full TAS
@@ -96,9 +88,10 @@ flexnic/tests/tcp_common: flexnic/tests/tcp_common.o
 tests/lowlevel: tests/lowlevel.o lib/libtas.so
 tests/lowlevel_echo: tests/lowlevel_echo.o lib/libtas.so
 
-tests/usocket_epoll_eof: tests/usocket_epoll_eof.o
-tests/usocket_shutdown: tests/usocket_shutdown.o
 tests/bench_ll_echo: tests/bench_ll_echo.o lib/libtas.so
+
+tests/rdma_client: tests/rdma_client.o lib/libtas_rdma.so lib/libtas.so
+tests/rdma_server: tests/rdma_server.o lib/libtas_rdma.so lib/libtas.so
 
 tests/libtas/tas_ll: tests/libtas/tas_ll.o tests/libtas/harness.o \
 	tests/libtas/harness.o tests/testutils.o lib/libtas.so
@@ -128,8 +121,9 @@ lib/libtas.so: $(call shared_objs, $(UTILS_OBJS) $(STACK_OBJS))
 
 
 clean:
-	rm -f *.o tas/*.o tas/fast/*.o tas/slow/*.o lib/utils/*.o \
-	  lib/tas/*.o lib/sockets/*.o tests/*.o tests/*/*.o tools/*.o \
+	rm -fv *.o tas/*.o tas/fast/*.o tas/slow/*.o lib/utils/*.o \
+	  lib/tas/*.o lib/sockets/*.o lib/rdma/*.o tests/*.o tests/*/*.o \
+	  tools/*.o \
 	  lib/libtas_rdma.so \
 	  lib/libtas.so \
 	  $(TESTS) \
