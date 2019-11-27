@@ -22,20 +22,23 @@ enum rdma_op_type_e {
  */
 enum rdma_op_status_e {
     RDMA_SUCCESS,
+    RDMA_PENDING,
     RDMA_CONN_FAILURE,
     RDMA_OUT_OF_BOUNDS
 };
 
 /**
- * RDMA Work Completion event.
- * 
- * TODO: Dummy attributes. Modify as necessary.
+ * RDMA Work/Completion Queue Entry
  */
-struct rdma_wc_event {
-    int id;  /**> Operation ID returned in RDMA read()/write() call */
-    enum rdma_op_type_e type;
-    enum rdma_op_status_e status;
-};
+struct rdma_wqe {
+    uint32_t id;  /**> Operation ID returned in RDMA read()/write() call */
+    uint8_t type;
+    uint8_t status;
+    uint16_t flags;
+    uint32_t loff;  /**> Local offset */
+    uint32_t roff;  /**> Remote offset */
+    uint32_t len;
+} __attribute__((packed));
 
 /**
  * Initialize application library to communicate with TAS.
@@ -135,11 +138,13 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
  * NOTE: *Blocking* or *Non-blocking* depending on params
  * 
  * @param fd    File Descriptor obtained on successful accept()/connect()
- * @param ev    Reference to RDMA event descriptor.
+ * @param compl_evs Reference to RDMA event descriptors.
+ * @param num   Number of events read
  * @param timeout Maximum amount of time to block to wait for event completion.
  *                Returns immediately if 0.
- * @return SUCCESS/FAILURE. If successful, completion event is copied to *ev*.
+ * @return -1 on FAILURE. If successful, number of events copied.
+ *          Completion events are copied to *evs*.
  */
-int rdma_poll_event(int fd, struct rdma_wc_event* ev, uint32_t timeout);
+int rdma_cq_poll(int fd, struct rdma_wqe** compl_evs, uint32_t num, uint32_t timeout);
 
 #endif /* FLEXTCP_RDMA_H_ */

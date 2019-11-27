@@ -119,6 +119,7 @@ STATIC_ASSERT(sizeof(struct flextcp_pl_ktx) == 64, ktx_size);
 
 #define FLEXTCP_PL_ARX_INVALID    0x0
 #define FLEXTCP_PL_ARX_CONNUPDATE 0x1
+#define FLEXTCP_PL_ARX_RDMAUPDATE 0x2
 
 #define FLEXTCP_PL_ARX_FLRXDONE  0x1
 
@@ -131,10 +132,18 @@ struct flextcp_pl_arx_connupdate {
   uint8_t flags;
 } __attribute__((packed));
 
+/** RDMA Fastpath -> Application connection bump */
+struct flextcp_pl_arx_rdmaconnupdate {
+  uint64_t opaque;
+  uint32_t wq_tail;
+  uint32_t cq_head;
+} __attribute__((packed));
+
 /** Application RX queue entry */
 struct flextcp_pl_arx {
   union {
     struct flextcp_pl_arx_connupdate connupdate;
+    struct flextcp_pl_arx_rdmaconnupdate rdmaupdate;
     uint8_t raw[31];
   } __attribute__((packed)) msg;
   volatile uint8_t type;
@@ -149,16 +158,26 @@ STATIC_ASSERT(sizeof(struct flextcp_pl_arx) == 32, arx_size);
 
 #define FLEXTCP_PL_ATX_FLTXDONE  0x1
 
+struct flextcp_pl_atx_connupdate {
+  uint32_t rx_bump;
+  uint32_t tx_bump;
+  uint32_t flow_id;
+  uint16_t bump_seq;
+  uint8_t  flags;
+} __attribute__((packed));
+
+/** RDMA Application -> Fastpath connection bump */
+struct flextcp_pl_atx_rdmaconnupdate {
+  uint32_t flow_id;
+  uint32_t wq_head;
+  uint32_t cq_tail;
+} __attribute__((packed));
+
 /** Application TX queue entry */
 struct flextcp_pl_atx {
   union {
-    struct {
-      uint32_t rx_bump;
-      uint32_t tx_bump;
-      uint32_t flow_id;
-      uint16_t bump_seq;
-      uint8_t  flags;
-    } __attribute__((packed)) connupdate;
+    struct flextcp_pl_atx_connupdate connupdate;
+    struct flextcp_pl_atx_rdmaconnupdate rdmaupdate;
     uint8_t raw[15];
   } __attribute__((packed)) msg;
   volatile uint8_t type;

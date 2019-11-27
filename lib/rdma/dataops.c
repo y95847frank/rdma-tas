@@ -15,7 +15,7 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     return -1;
 }
 
-int rdma_poll_event(int fd, struct rdma_wc_event* ev, uint32_t timeout)
+int rdma_cq_poll(int fd, struct rdma_wqe** compl_evs, uint32_t num, uint32_t timeout)
 {
     return -1;
 }
