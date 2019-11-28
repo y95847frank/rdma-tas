@@ -113,15 +113,11 @@ struct flextcp_connection {
   /** pending tx bump to fast path */
   uint32_t txb_bump;
 
-  /* work queue */
+  /* work queue / completion queue */
   uint8_t *wq_base;
   uint32_t wq_len;
   uint32_t wq_head; /*> Offset to write next wq entry */
   uint32_t wq_tail; /*> Offset to first unprocessed wq entry */
-
-  /* completion queue */
-  uint8_t *cq_base;
-  uint32_t cq_len;
   uint32_t cq_head; /*> Offset to write next cq entry */
   uint32_t cq_tail; /*> Offset to first unread cq entry */
 
