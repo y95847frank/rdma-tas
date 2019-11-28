@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 
 #include <tas_rdma.h>
 #include <netinet/in.h>
@@ -14,7 +15,10 @@ int main()
   remoteaddr.sin_addr.s_addr = inet_addr(ip);
   remoteaddr.sin_port = htons(5005);
 
-  int fd = rdma_connect(&remoteaddr);
+  void *mr_base;
+  uint32_t mr_len;
+
+  int fd = rdma_connect(&remoteaddr, &mr_base, &mr_len);
 
   if (fd < 0)
     fprintf(stderr, "Connection failed\n");

@@ -10,7 +10,7 @@ enum {
     RDMA_CONN_SOCKET
 };
 
-struct socket{
+struct rdma_socket{
     union {
         struct flextcp_connection c;
         struct flextcp_listener l;

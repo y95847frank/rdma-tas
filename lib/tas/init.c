@@ -481,7 +481,6 @@ static int fastpath_poll_vec(struct flextcp_context *ctx, int num,
   return 0;
 }
 
-// TODO: Fastpath need not be polled at all!
 int flextcp_context_poll(struct flextcp_context *ctx, int num,
     struct flextcp_event *events)
 {
@@ -589,6 +588,16 @@ static inline int event_kappin_conn_opened(
   conn->txb_base = (uint8_t *) flexnic_mem + inev->tx_off;
   conn->txb_len = inev->tx_len;
 
+  conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
+  conn->wq_len = inev->wq_len;
+
+  conn->cq_base = (uint8_t *) flexnic_mem + inev->cq_off;
+  conn->cq_len = inev->cq_len;
+
+  conn->mr_base = (uint8_t *) flexnic_mem + inev->mr_off;
+  conn->mr_len = inev->mr_len;
+
+  // TODO: Check if this is required
   /* inject bump if necessary */
   if (conn->rxb_used > 0) {
     conn->seq_rx += conn->rxb_used;
@@ -600,6 +609,7 @@ static inline int event_kappin_conn_opened(
     j++;
   }
 
+  // TODO: Check if this is required
   /* add end of stream notification if necessary */
   if (conn->rx_closed) {
     outev[j].event_type = FLEXTCP_EV_CONN_RXCLOSED;
@@ -662,6 +672,16 @@ static inline int event_kappin_accept_conn(
   conn->txb_base = (uint8_t *) flexnic_mem + inev->tx_off;
   conn->txb_len = inev->tx_len;
 
+  conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
+  conn->wq_len = inev->wq_len;
+
+  conn->cq_base = (uint8_t *) flexnic_mem + inev->cq_off;
+  conn->cq_len = inev->cq_len;
+
+  conn->mr_base = (uint8_t *) flexnic_mem + inev->mr_off;
+  conn->mr_len = inev->mr_len;
+
+  // TODO: Check if this is required
   /* inject bump if necessary */
   if (conn->rxb_used > 0) {
     conn->seq_rx += conn->rxb_used;
@@ -673,6 +693,7 @@ static inline int event_kappin_accept_conn(
     j++;
   }
 
+  // TODO: Check if this is required
   /* add end of stream notification if necessary */
   if (conn->rx_closed) {
     outev[j].event_type = FLEXTCP_EV_CONN_RXCLOSED;

@@ -154,8 +154,6 @@ int flextcp_connection_open(struct flextcp_context *ctx,
   ctx->kin_head = pos;
 
   return 0;
-
-
 }
 
 int flextcp_connection_close(struct flextcp_context *ctx,
