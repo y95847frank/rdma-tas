@@ -437,14 +437,26 @@ struct connection {
     struct packetmem_handle *rx_handle;
     /** Memory manager handle for transmit buffer. */
     struct packetmem_handle *tx_handle;
+    /** Memory manager handle for memory region. */
+    struct packetmem_handle *mr_handle;
+    /** Memory manager handle for work queue. */
+    struct packetmem_handle *wq_handle;
     /** Receive buffer pointer. */
     uint8_t *rx_buf;
     /** Transmit buffer pointer. */
     uint8_t *tx_buf;
+    /** Memory region pointer. */
+    uint8_t *mr_buf;
+    /** Work Queue pointer. */
+    uint8_t *wq_buf;
     /** Receive buffer size. */
     uint32_t rx_len;
     /** Transmit buffer size. */
     uint32_t tx_len;
+    /** Memory region size. */
+    uint32_t mr_len;
+    /** Work Queue size. */
+    uint32_t wq_len;
   /**@}*/
 
   /**
