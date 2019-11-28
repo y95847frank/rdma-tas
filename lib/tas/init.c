@@ -591,9 +591,6 @@ static inline int event_kappin_conn_opened(
   conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
   conn->wq_len = inev->wq_len;
 
-  conn->cq_base = (uint8_t *) flexnic_mem + inev->cq_off;
-  conn->cq_len = inev->cq_len;
-
   conn->mr_base = (uint8_t *) flexnic_mem + inev->mr_off;
   conn->mr_len = inev->mr_len;
 
@@ -674,9 +671,6 @@ static inline int event_kappin_accept_conn(
 
   conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
   conn->wq_len = inev->wq_len;
-
-  conn->cq_base = (uint8_t *) flexnic_mem + inev->cq_off;
-  conn->cq_len = inev->cq_len;
 
   conn->mr_base = (uint8_t *) flexnic_mem + inev->mr_off;
   conn->mr_len = inev->mr_len;
