@@ -176,6 +176,14 @@ struct kernel_appin_conn_opened {
   uint64_t tx_off;
   uint32_t rx_len;
   uint32_t tx_len;
+
+  uint64_t wq_off;
+  uint32_t wq_len;
+  uint64_t cq_off;
+  uint32_t cq_len;
+  uint64_t mr_off;
+  uint32_t mr_len;
+
   int32_t  status;
   uint32_t seq_rx;
   uint32_t seq_tx;
@@ -199,6 +207,14 @@ struct kernel_appin_accept_conn {
   uint64_t tx_off;
   uint32_t rx_len;
   uint32_t tx_len;
+
+  uint64_t wq_off;
+  uint32_t wq_len;
+  uint64_t cq_off;
+  uint32_t cq_len;
+  uint64_t mr_off;
+  uint32_t mr_len;
+
   int32_t  status;
   uint32_t seq_rx;
   uint32_t seq_tx;
