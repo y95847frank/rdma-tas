@@ -51,6 +51,7 @@ int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     wqe_pos->len = len;
 
     // 5. Increment Queue head
+	uint32_t old_head = c->wq_head
 	wqe_pos += 1
 	uint32_t updated_head = (uint32_t) ((uint8_t*) wqe_pos - c->wq_base)
 	if updated_head == c->wq_len:
@@ -58,7 +59,14 @@ int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     MEM_BARRIER();
     c->wq_head = updated_head;
 
-	// 6. TODO: Bump the fast path
+	// TODO: Handle the case where bump queue is full
+	// 6. Bump the fast path
+	if rdma_conn_bump(appctx, c) < 0 {
+		// Move back the head (effectively revert adding wqe)
+		c->wq_head = old_head
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+	}
 
     return id;
 }
@@ -112,7 +120,14 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     MEM_BARRIER();
     c->wq_head = updated_head;
 
-	// 6. TODO: Bump the fast path
+	// TODO: Handle the case where bump queue is full
+	// 6. Bump the fast path
+	if rdma_conn_bump(appctx, c) < 0 {
+		// Move back the head (effectively revert adding wqe)
+		c->wq_head = old_head
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+	}
 
     return id;
 }

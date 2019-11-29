@@ -506,6 +506,7 @@ int flextcp_context_poll(struct flextcp_context *ctx, int num,
   fastpath_poll_vec(ctx, num - i, events + i, &j);
 
   txq_probe(ctx, num);
+  // TODO: Handle failed rdma bumps
   conns_bump(ctx);
 
   return i + j;
@@ -920,6 +921,23 @@ static void txq_probe(struct flextcp_context *ctx, unsigned n)
 
     ctx->queues[q].txq_avail = avail;
   }
+}
+
+static int rdma_conn_bump(struct flextcp_context *ctx,
+		struct flextcp_connection *c){
+	struct flextcp_pl_atx *atx;
+    assert(c->status == CONN_OPEN);
+    if (flextcp_context_tx_alloc(ctx, &atx, c->fn_core) != 0) {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+		return -1
+    }
+    atx->msg.rdmaupdate.wq_head = c->wq_head;
+    atx->msg.rdmaupdate.cq_tail = c->cq_tail;
+    atx->msg.rdmaupdate.flow_id = c->flow_id;
+    MEM_BARRIER();
+    atx->type = FLEXTCP_PL_ATX_RDMAUPDATE;
+    flextcp_context_tx_done(ctx, c->fn_core);
+	return 0
 }
 
 static void conns_bump(struct flextcp_context *ctx)
