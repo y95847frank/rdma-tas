@@ -575,6 +575,12 @@ unlock:
     fprintf(stderr, "dma_krx_pkt_fastpath: updating application state\n");
 #endif
 
+    /**
+     * TODO:
+     * If rx_bump: fast_rdmarq_bump() -> if cq_update, arx_cache_add()
+     * If tx_bump: rdma_poll_workqueue()
+     */
+
     uint16_t type;
     type = FLEXTCP_PL_ARX_CONNUPDATE;
 

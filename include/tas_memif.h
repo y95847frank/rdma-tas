@@ -357,8 +357,12 @@ struct flextcp_pl_flowst {
   uint32_t rq_head;
   /** Offset of the oldest unack'd request */
   uint32_t rq_tail;
-
 // 192
+  /** Buffer for partially received request */
+  uint8_t pending_rq_buf[16];
+  /** RQ parsing state */
+  uint32_t pending_rq_state;
+// 212
 } __attribute__((packed, aligned(64)));
 
 #define FLEXNIC_PL_FLOWHTE_VALID  (1 << 31)

@@ -94,7 +94,7 @@ int fast_appctx_poll_bump(struct dataplane_context *ctx, void *pqe,
         atx->msg.connupdate.bump_seq, atx->msg.connupdate.rx_bump,
         atx->msg.connupdate.tx_bump, atx->msg.connupdate.flags, nbh, ts);
   else
-    ret = fast_rdmaqueue_bump(ctx, atx->msg.rdmaupdate.flow_id,
+    ret = fast_rdmawq_bump(ctx, atx->msg.rdmaupdate.flow_id,
             atx->msg.rdmaupdate.wq_head, atx->msg.rdmaupdate.cq_tail);
 
   if (ret != 0)

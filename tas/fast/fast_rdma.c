@@ -11,13 +11,17 @@
 #include "tas_rdma.h"
 #include "tcp_common.h"
 
+#define RDMA_RQ_PENDING_PARSE 0x0
+#define RDMA_RQ_PENDING_DATA  0xf
+
 static inline void rdma_poll_workqueue(struct dataplane_context* ctx, 
       struct flextcp_pl_flowst* fl);
-static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl, 
+static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
       uint32_t len, void* src);
+static inline void fast_rdma_rxbuf_copy(struct flextcp_pl_flowst* fl,
+      uint32_t rx_head, uint32_t len, void* dst);
 
-
-int fast_rdmaqueue_bump(struct dataplane_context *ctx, uint32_t flow_id,
+int fast_rdmawq_bump(struct dataplane_context *ctx, uint32_t flow_id,
     uint32_t new_wq_head, uint32_t new_cq_tail)
 {
   struct flextcp_pl_flowst *fs = &fp_state->flowst[flow_id];
@@ -90,7 +94,7 @@ int fast_rdmaqueue_bump(struct dataplane_context *ctx, uint32_t flow_id,
             old_avail, TCP_MSS, QMAN_SET_RATE | QMAN_SET_MAXCHUNK
             | QMAN_ADD_AVAIL) != 0)
       {
-        fprintf(stderr, "fast_rdmaqueue_bump: qman_set failed, UNEXPECTED\n");
+        fprintf(stderr, "fast_rdmawq_bump: qman_set failed, UNEXPECTED\n");
         abort();
       }
     }
@@ -105,6 +109,150 @@ RDMA_BUMP_ERROR:
           flow_id, wq_len, wq_head, wq_tail, cq_head, cq_tail,
           new_wq_head, new_cq_tail);
   return -1;
+}
+
+int fast_rdmarq_bump(struct dataplane_context* ctx,
+    struct flextcp_pl_flowst* fs, uint32_t prev_rx_head, uint32_t rx_bump)
+{
+  uint32_t rq_head, rq_len, rx_head, rx_len, new_rx_head;
+  rq_head = fs->rq_head;
+  rq_len = fs->wq_len;
+  rx_head = prev_rx_head;
+  rx_len = fs->rx_len;
+  new_rx_head = prev_rx_head + rx_bump;
+  if (new_rx_head >= rx_len)
+    new_rx_head -= rx_len;
+
+  uint32_t wqe_pending_rx, rx_bump_len;
+  while (rx_head != new_rx_head && rx_bump > 0)
+  {
+    if (fs->pending_rq_state == RDMA_RQ_PENDING_DATA)
+    {
+      struct rdma_wqe* wqe = dma_pointer(fs->rq_base + rq_head,
+                                            sizeof(struct rdma_wqe));
+      wqe_pending_rx = wqe->len;
+      rx_bump_len = MIN(wqe_pending_rx, rx_bump);
+      void* mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
+      fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, mr_ptr);
+
+      rx_head += rx_bump_len;
+      if (rx_head >= rx_len)
+        rx_head -= rx_len;
+      rx_bump -= rx_bump_len;
+      wqe_pending_rx -= rx_bump_len;
+      wqe->len -= rx_bump_len;
+      wqe->loff += rx_bump_len;
+
+      if (wqe_pending_rx == 0)
+      {
+        fs->pending_rq_state = RDMA_RQ_PENDING_PARSE;
+        rq_head += sizeof(struct rdma_wqe);
+        if (rq_head >= rq_len)
+          rq_head -= rq_len;
+      }
+    }
+    else
+    {
+      wqe_pending_rx = 16 - fs->pending_rq_state;
+      rx_bump_len = MIN(wqe_pending_rx, rx_bump);
+      fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, fs->pending_rq_buf + fs->pending_rq_state);
+
+      rx_head += rx_bump_len;
+      if (rx_head >= rx_len)
+        rx_head -= rx_len;
+      rx_bump -= rx_bump_len;
+      wqe_pending_rx -= rx_bump_len;
+      fs->pending_rq_state += rx_bump_len;
+
+      if (wqe_pending_rx == 0)
+      {
+        struct rdma_hdr* hdr = (struct rdma_hdr*) fs->pending_rq_buf;
+        struct rdma_wqe* wqe = dma_pointer(fs->rq_base + rq_head,
+                                            sizeof(struct rdma_wqe));
+
+        /**
+         *  TODO: Parse the header.
+         *  If response, update the status on cq. Bump the app.
+         *  If read request, add to rq.
+         *  If write request, wait for pending data.
+         */
+        uint8_t type = hdr->type;
+        if ((type & RDMA_RESPONSE) == RDMA_RESPONSE)
+        {
+          /* Not yet implemented */
+          fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
+          rq_head += sizeof(struct rdma_wqe);
+          if (rq_head >= rq_len)
+            rq_head -= rq_len;
+        }
+        else if ((type & RDMA_REQUEST) == RDMA_REQUEST)
+        {
+          wqe->id = f_beui32(hdr->id);
+          wqe->len = f_beui32(hdr->length);
+          wqe->loff = f_beui32(hdr->offset);
+          wqe->status = RDMA_TX_PENDING;
+          wqe->roff = 0;
+
+          if ((type & RDMA_READ) == RDMA_READ)
+          {
+            wqe->type = (RDMA_RESPONSE | RDMA_READ);
+            fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
+            rq_head += sizeof(struct rdma_wqe);
+            if (rq_head >= rq_len)
+              rq_head -= rq_len;
+          }
+          else if ((type & RDMA_WRITE) == RDMA_WRITE)
+          {
+            wqe->type = (RDMA_RESPONSE | RDMA_WRITE);
+          }
+          else
+          {
+            fprintf(stderr, "Invalid RDMA request recevied\n");
+            abort();
+          }
+        }
+        else
+        {
+          fprintf(stderr, "Invalid RDMA request recevied\n");
+          abort();
+        }
+      }
+    }
+  }
+
+  fs->rq_head = rq_head;
+
+  return 0;
+}
+
+static inline void fast_rdma_rxbuf_copy(struct flextcp_pl_flowst* fl,
+      uint32_t rx_head, uint32_t len, void* dst)
+{
+  uintptr_t buf1, buf2;
+  uint32_t len1, len2;
+
+  uint32_t rxbuf_len = fl->rx_len;
+  uint64_t rxbuf_base = (fl->rx_base_sp & FLEXNIC_PL_FLOWST_RX_MASK);
+
+  if (rx_head + len > rxbuf_len)
+  {
+    len1 = (rxbuf_len - rx_head);
+    len2 = (len - len1);
+  }
+  else
+  {
+    len1 = len;
+    len2 = 0;
+  }
+
+  buf1 = (uintptr_t) dma_pointer(rxbuf_base + rx_head, len1);
+  buf2 = (uintptr_t) dma_pointer(rxbuf_base, len2);
+
+  dma_read(buf1, len1, dst);
+  if (len2)
+    dma_read(buf2, len2, dst + len1);
+
+  fl->rx_avail += len;
 }
 
 static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl, 
@@ -131,7 +279,7 @@ static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
   buf2 = (uintptr_t) dma_pointer(fl->tx_base, len2);
 
   dma_write(buf1, len1, src);
-  if (!len2)
+  if (len2)
     dma_write(buf2, len2, src + len1);
 
   txbuf_head += len;
