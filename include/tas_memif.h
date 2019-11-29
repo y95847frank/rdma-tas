@@ -325,6 +325,30 @@ struct flextcp_pl_flowst {
   uint32_t rtt_est;
 
 // 128
+
+  /********************RDMA additions *********************/
+  /** Offset in buffer for new data */
+  uint32_t txb_head;
+  /** Offset to next segment in partially transmitted WQ entry */
+  uint32_t wqe_tx_seq;
+  /** Base address of Work/Completion queue buffer */
+  uint64_t wq_base;
+  /** Base address of Memory Region */
+  uint64_t mr_base;
+  /** Work/Completion queue size in bytes */
+  uint32_t wq_len;
+  /** Memory region size in bytes */
+  uint32_t mr_len;
+  /** Offset to which new WQE will be added */
+  uint32_t wq_head;
+  /** Offset of the next WQE to be processed */
+  uint32_t wq_tail;
+  /** Offset of the oldest ack'd WQE unprocessed by application */
+  uint32_t cq_head;
+  /** Offset of the latest ack'd WQE unprocessed by application */
+  uint32_t cq_tail;
+
+// 176
 } __attribute__((packed, aligned(64)));
 
 #define FLEXNIC_PL_FLOWHTE_VALID  (1 << 31)

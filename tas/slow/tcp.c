@@ -570,6 +570,8 @@ static int conn_syn_sent_packet(struct connection *c, const struct pkt_tcp *p,
   if (nicif_connection_add(c->db_id, c->remote_mac, c->local_ip, c->local_port,
         c->remote_ip, c->remote_port, c->rx_buf - (uint8_t *) tas_shm,
         c->rx_len, c->tx_buf - (uint8_t *) tas_shm, c->tx_len,
+        c->wq_buf - (uint8_t*) tas_shm, c->wq_len,
+        c->mr_buf - (uint8_t*) tas_shm, c->mr_len,
         c->remote_seq, c->local_seq, c->opaque, c->flags, c->cc_rate,
         c->fn_core, c->flow_group, &c->flow_id)
       != 0)
@@ -966,6 +968,8 @@ static void listener_accept(struct listener *l)
   if (nicif_connection_add(c->db_id, c->remote_mac, c->local_ip, c->local_port,
         c->remote_ip, c->remote_port, c->rx_buf - (uint8_t *) tas_shm,
         c->rx_len, c->tx_buf - (uint8_t *) tas_shm, c->tx_len,
+        c->wq_buf - (uint8_t*) tas_shm, c->wq_len,
+        c->mr_buf - (uint8_t*) tas_shm, c->mr_len,
         c->remote_seq, c->local_seq + 1, c->opaque, c->flags, c->cc_rate,
         c->fn_core, c->flow_group, &c->flow_id)
       != 0)
