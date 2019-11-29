@@ -96,7 +96,7 @@ int fast_rdmaqueue_bump(struct dataplane_context *ctx, uint32_t flow_id,
     }
   }
   fs_unlock(fs);
-  return 0;
+  return -1;  /* Return value compatible with fast_flows_bump() */
 
 RDMA_BUMP_ERROR:
   fs_unlock(fs);

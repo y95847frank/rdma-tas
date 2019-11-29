@@ -155,6 +155,7 @@ STATIC_ASSERT(sizeof(struct flextcp_pl_arx) == 32, arx_size);
 /* App TX queue */
 
 #define FLEXTCP_PL_ATX_CONNUPDATE 0x1
+#define FLEXTCP_PL_ATX_RDMAUPDATE 0x2
 
 #define FLEXTCP_PL_ATX_FLTXDONE  0x1
 
@@ -237,6 +238,9 @@ struct flextcp_pl_appctx {
 #define FLEXNIC_PL_FLOWST_RXFIN 32
 #define FLEXNIC_PL_FLOWST_RX_MASK (~63ULL)
 
+/**
+ * TODO: Consider rearranging struct attributes for cache performance.
+ */
 /** Flow state registers */
 struct flextcp_pl_flowst {
   /********************************************************/
