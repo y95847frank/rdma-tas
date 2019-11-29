@@ -544,7 +544,7 @@ static int config_defaults(struct configuration *c, char *progname)
   c->tcp_handshake_to = 10000;
   c->tcp_handshake_retries = 10;
   c->rdma_mr_len = 64 * 1024;
-  c->rdma_wq_len = 16 * 64;
+  c->rdma_wq_len = 20 * 64;
   c->cc_algorithm = CONFIG_CC_DCTCP_RATE;
   c->cc_control_granularity = 50;
   c->cc_control_interval = 2;

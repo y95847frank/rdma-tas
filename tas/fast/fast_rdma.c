@@ -275,8 +275,8 @@ static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
     len2 = 0;
   }
   
-  buf1 = (uintptr_t) dma_pointer(fl->tx_base + txbuf_head, len1);
-  buf2 = (uintptr_t) dma_pointer(fl->tx_base, len2);
+  buf1 = (uintptr_t) (fl->tx_base + txbuf_head);
+  buf2 = (uintptr_t) (fl->tx_base);
 
   dma_write(buf1, len1, src);
   if (len2)
@@ -311,7 +311,6 @@ static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
   while (wq_tail != wq_head && free_txbuf_len > 0)
   {
     wqe = dma_pointer(fl->wq_base + wq_tail, sizeof(struct rdma_wqe));
-    wqe = (struct rdma_wqe*) (fl->wq_base + wq_tail);
 
     /* Partially transmitted workqueue entry */
     if (wqe->status == RDMA_TX_PENDING)
