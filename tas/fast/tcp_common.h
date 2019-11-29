@@ -28,6 +28,8 @@
 #include <tas_memif.h>
 #include <utils.h>
 
+#define TCP_MSS 1448
+#define TCP_MAX_RTT 100000
 #define ALLOW_FUTURE_ACKS 1
 
 /**

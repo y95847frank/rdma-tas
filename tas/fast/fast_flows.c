@@ -46,15 +46,6 @@ struct flow_key {
   beui16_t remote_port;
 } __attribute__((packed));
 
-#if 1
-#define fs_lock(fs) util_spin_lock(&fs->lock)
-#define fs_unlock(fs) util_spin_unlock(&fs->lock)
-#else
-#define fs_lock(fs) do {} while (0)
-#define fs_unlock(fs) do {} while (0)
-#endif
-
-
 static void flow_tx_read(struct flextcp_pl_flowst *fs, uint32_t pos,
     uint16_t len, void *dst);
 static void flow_rx_write(struct flextcp_pl_flowst *fs, uint32_t pos,

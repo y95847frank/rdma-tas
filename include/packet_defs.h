@@ -208,7 +208,7 @@ struct obj_hdr {
 struct rdma_hdr {
   uint8_t type;
   uint8_t status;
-  uint16_t flags;
+  beui16_t flags;
   beui32_t id;
   beui32_t offset;
   beui32_t length;
