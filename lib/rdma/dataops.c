@@ -45,7 +45,7 @@ int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
 
     // 4. Fill entries of Work Queue
     int32_t id;
-    id = wqe_pos->id = c->wq_head;
+    id = wqe_pos->id = (c->wq_tail + c->wq_len) % c->wq_size;
     wqe_pos->type = RDMA_OP_READ;
     wqe_pos->status = RDMA_PENDING;
     wqe_pos->loff = loffset;
@@ -94,16 +94,18 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
 
     // 3. Acquire Work Queue Entry
     // NOTE: c->wq_len must be a multiple of sizeof(struct rdma_wqe)
-    if (c->wq_head == c->cq_tail){
+    if (c->wq_len + c->cq_len == c->wq_size){
         // Queue full!
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct rdma_wqe* wqe_pos = (struct rdma_wqe*)(c->wq_base + c->wq_head);
+
+	uint32_t wq_head = (c->wq_tail + c->wq_len) % c->wq_size;
+    struct rdma_wqe* wqe_pos = (struct rdma_wqe*)(c->wq_base + wq_head);
 
     // 4. Fill entries of Work Queue
     int32_t id;
-    id = wqe_pos->id = c->wq_head;
+    id = wqe_pos->id = (c->wq_tail + c->wq_len) % c->wq_size;
     wqe_pos->type = RDMA_OP_WRITE;
     wqe_pos->status = RDMA_PENDING;
     wqe_pos->loff = loffset;
