@@ -115,10 +115,10 @@ struct flextcp_connection {
 
   /* work queue / completion queue */
   uint8_t *wq_base;
-  uint32_t wq_len;
-  uint32_t wq_head; /*> Offset to write next wq entry */
+  uint32_t wq_size;
+  uint32_t wq_len; /*> Number of pending work queue entries */
   uint32_t wq_tail; /*> Offset to first unprocessed wq entry */
-  uint32_t cq_head; /*> Offset to write next cq entry */
+  uint32_t cq_len; /*> Number of unread cq entries */
   uint32_t cq_tail; /*> Offset to first unread cq entry */
 
   /* Memory region */

@@ -590,7 +590,7 @@ static inline int event_kappin_conn_opened(
   conn->txb_len = inev->tx_len;
 
   conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
-  conn->wq_len = inev->wq_len;
+  conn->wq_size = inev->wq_len;
 
   conn->mr = (uint8_t *) flexnic_mem + inev->mr_off;
   conn->mr_len = inev->mr_len;
@@ -671,7 +671,7 @@ static inline int event_kappin_accept_conn(
   conn->txb_len = inev->tx_len;
 
   conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
-  conn->wq_len = inev->wq_len;
+  conn->wq_size = inev->wq_len;
 
   conn->mr = (uint8_t *) flexnic_mem + inev->mr_off;
   conn->mr_len = inev->mr_len;
@@ -928,13 +928,13 @@ int rdma_conn_bump(struct flextcp_context *ctx,
 
     // TODO: Do we need txq_probe() here?
 
-	  struct flextcp_pl_atx *atx;
+	struct flextcp_pl_atx *atx;
     assert(c->status == CONN_OPEN);
     if (flextcp_context_tx_alloc(ctx, &atx, c->fn_core) != 0) {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
 		    return -1;
     }
-    atx->msg.rdmaupdate.wq_head = c->wq_head;
+    atx->msg.rdmaupdate.wq_head = (c->wq_tail + c->wq_len) % c->wq_size;
     atx->msg.rdmaupdate.cq_tail = c->cq_tail;
     atx->msg.rdmaupdate.flow_id = c->flow_id;
     MEM_BARRIER();
