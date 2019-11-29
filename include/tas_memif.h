@@ -337,6 +337,8 @@ struct flextcp_pl_flowst {
   uint32_t wqe_tx_seq;
   /** Base address of Work/Completion queue buffer */
   uint64_t wq_base;
+  /** Base address of Reponse queue buffer */
+  uint64_t rq_base;
   /** Base address of Memory Region */
   uint64_t mr_base;
   /** Work/Completion queue size in bytes */
@@ -351,8 +353,12 @@ struct flextcp_pl_flowst {
   uint32_t cq_head;
   /** Offset of the latest ack'd WQE unprocessed by application */
   uint32_t cq_tail;
+  /** Offset of the latest unack'd request */
+  uint32_t rq_head;
+  /** Offset of the oldest unack'd request */
+  uint32_t rq_tail;
 
-// 176
+// 192
 } __attribute__((packed, aligned(64)));
 
 #define FLEXNIC_PL_FLOWHTE_VALID  (1 << 31)
