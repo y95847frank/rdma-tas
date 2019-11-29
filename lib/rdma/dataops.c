@@ -1,8 +1,9 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "tas_ll.h"
 #include "tas_rdma.h"
-
+#include "utils.h"
 #include "internal.h"
 
 /* NOTE: Two data operations must not be called concurrently on the same
@@ -33,13 +34,13 @@ int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     }
 
     // 3. Acquire Work Queue Entry
-	// NOTE: c->wq_len must be a multiple of sizeof(struct rdma_wqe)
+	  // NOTE: c->wq_len must be a multiple of sizeof(struct rdma_wqe)
     if (c->wq_head == c->cq_tail){
         // Queue full!
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct rdma_wqe* wqe_pos = (c->wq_base + c->wq_head);
+    struct rdma_wqe* wqe_pos = (struct rdma_wqe*)(c->wq_base + c->wq_head);
 
     // 4. Fill entries of Work Queue
     int32_t id;
@@ -51,22 +52,23 @@ int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     wqe_pos->len = len;
 
     // 5. Increment Queue head
-	uint32_t old_head = c->wq_head
-	wqe_pos += 1
-	uint32_t updated_head = (uint32_t) ((uint8_t*) wqe_pos - c->wq_base)
-	if updated_head == c->wq_len:
-		updated_head = 0
+	  uint32_t old_head = c->wq_head;
+	  wqe_pos += 1;
+	  uint32_t updated_head = (uint32_t) ((uint8_t*) wqe_pos - c->wq_base);
+	  if (updated_head == c->wq_len){
+		  updated_head = 0;
+    }
     MEM_BARRIER();
     c->wq_head = updated_head;
 
-	// TODO: Handle the case where bump queue is full
-	// 6. Bump the fast path
-	if rdma_conn_bump(appctx, c) < 0 {
-		// Move back the head (effectively revert adding wqe)
-		c->wq_head = old_head
+    // TODO: Handle the case where bump queue is full
+    // 6. Bump the fast path
+    if (rdma_conn_bump(appctx, c) < 0) {
+        // Move back the head (effectively revert adding wqe)
+        c->wq_head = old_head;
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
-	}
+    }
 
     return id;
 }
@@ -95,13 +97,13 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     }
 
     // 3. Acquire Work Queue Entry
-	// NOTE: c->wq_len must be a multiple of sizeof(struct rdma_wqe)
+    // NOTE: c->wq_len must be a multiple of sizeof(struct rdma_wqe)
     if (c->wq_head == c->cq_tail){
         // Queue full!
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct rdma_wqe* wqe_pos = (c->wq_base + c->wq_head);
+    struct rdma_wqe* wqe_pos = (struct rdma_wqe*)(c->wq_base + c->wq_head);
 
     // 4. Fill entries of Work Queue
     int32_t id;
@@ -113,21 +115,23 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     wqe_pos->len = len;
 
     // 5. Increment Queue head
-	wqe_pos += 1
-	uint32_t updated_head = (uint32_t) ((uint8_t*) wqe_pos - c->wq_base)
-	if updated_head == c->wq_len:
-		updated_head = 0
+	  uint32_t old_head = c->wq_head;
+    wqe_pos += 1;
+    uint32_t updated_head = (uint32_t) ((uint8_t*) wqe_pos - c->wq_base);
+    if(updated_head == c->wq_len){
+		  updated_head = 0;
+    }
     MEM_BARRIER();
     c->wq_head = updated_head;
 
-	// TODO: Handle the case where bump queue is full
-	// 6. Bump the fast path
-	if rdma_conn_bump(appctx, c) < 0 {
-		// Move back the head (effectively revert adding wqe)
-		c->wq_head = old_head
+    // TODO: Handle the case where bump queue is full
+    // 6. Bump the fast path
+    if (rdma_conn_bump(appctx, c) < 0) {
+        // Move back the head (effectively revert adding wqe)
+        c->wq_head = old_head;
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
-	}
+    }
 
     return id;
 }

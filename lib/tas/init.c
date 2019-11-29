@@ -592,7 +592,7 @@ static inline int event_kappin_conn_opened(
   conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
   conn->wq_len = inev->wq_len;
 
-  conn->mr_base = (uint8_t *) flexnic_mem + inev->mr_off;
+  conn->mr = (uint8_t *) flexnic_mem + inev->mr_off;
   conn->mr_len = inev->mr_len;
 
   // TODO: Check if this is required
@@ -673,7 +673,7 @@ static inline int event_kappin_accept_conn(
   conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
   conn->wq_len = inev->wq_len;
 
-  conn->mr_base = (uint8_t *) flexnic_mem + inev->mr_off;
+  conn->mr = (uint8_t *) flexnic_mem + inev->mr_off;
   conn->mr_len = inev->mr_len;
 
   // TODO: Check if this is required
@@ -923,13 +923,16 @@ static void txq_probe(struct flextcp_context *ctx, unsigned n)
   }
 }
 
-static int rdma_conn_bump(struct flextcp_context *ctx,
+int rdma_conn_bump(struct flextcp_context *ctx,
 		struct flextcp_connection *c){
-	struct flextcp_pl_atx *atx;
+
+    // TODO: Do we need txq_probe() here?
+
+	  struct flextcp_pl_atx *atx;
     assert(c->status == CONN_OPEN);
     if (flextcp_context_tx_alloc(ctx, &atx, c->fn_core) != 0) {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
-		return -1
+		    return -1;
     }
     atx->msg.rdmaupdate.wq_head = c->wq_head;
     atx->msg.rdmaupdate.cq_tail = c->cq_tail;
@@ -937,7 +940,7 @@ static int rdma_conn_bump(struct flextcp_context *ctx,
     MEM_BARRIER();
     atx->type = FLEXTCP_PL_ATX_RDMAUPDATE;
     flextcp_context_tx_done(ctx, c->fn_core);
-	return 0
+	  return 0;
 }
 
 static void conns_bump(struct flextcp_context *ctx)

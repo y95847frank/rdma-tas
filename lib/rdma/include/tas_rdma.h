@@ -11,8 +11,8 @@
  * RDMA operation types.
  */
 enum rdma_op_type_e {
-    RDMA_READ,
-    RDMA_WRITE
+    RDMA_OP_READ,
+    RDMA_OP_WRITE
 };
 
 /**
@@ -76,7 +76,7 @@ int rdma_listen(const struct sockaddr_in* localaddr, int backlog);
  * 
  * @return File Descriptor on SUCCESS. -1 on FAILURE.
  */
-int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr);
+int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr, void **mr_base, uint32_t *mr_len);
 
 /**
  * Connect to a remote RDMA-capable server.
@@ -88,7 +88,7 @@ int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr);
  * 
  * @return File Descriptor on SUCCESS. -1 on FAILURE.
  */
-int rdma_connect(const struct sockaddr_in* remoteaddr);
+int rdma_connect(const struct sockaddr_in* remoteaddr, void **mr_base, uint32_t *mr_len);
 
 /**
  * One-sided communication primitive to read data

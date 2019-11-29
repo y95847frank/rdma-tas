@@ -248,6 +248,12 @@ int flextcp_context_create(struct flextcp_context *ctx);
 int flextcp_context_poll(struct flextcp_context *ctx, int num,
     struct flextcp_event *events);
 
+/**
+ * Bump fast path for a new RDMA wq entry
+ */
+int rdma_conn_bump(struct flextcp_context *ctx,
+    struct flextcp_connection *c);
+
 void flextcp_block(struct flextcp_context *ctx, int timeout_ms);
 
 /*****************************************************************************/
