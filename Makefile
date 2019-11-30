@@ -100,7 +100,7 @@ tests/libtas/tas_ll: tests/libtas/tas_ll.o tests/libtas/harness.o \
 tests/tas_unit/%.o: CFLAGS+=-Itas/include
 tests/tas_unit/fastpath: LDLIBS+=-lrte_eal
 tests/tas_unit/fastpath: tests/tas_unit/fastpath.o tests/testutils.o \
-  tas/fast/fast_flows.o
+  tas/fast/fast_flows.o tas/fast/fast_rdma.o
 
 tests/full/%.o: CFLAGS+=-Itas/include
 tests/full/tas_linux: tests/full/tas_linux.o tests/full/fulltest.o lib/libtas.so

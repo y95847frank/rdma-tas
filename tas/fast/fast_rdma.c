@@ -14,12 +14,16 @@
 #define RDMA_RQ_PENDING_PARSE 0x0
 #define RDMA_RQ_PENDING_DATA  0x10
 
-static inline void rdma_poll_workqueue(struct dataplane_context* ctx, 
+static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
       struct flextcp_pl_flowst* fl);
 static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
       uint32_t len, void* src);
 static inline void fast_rdma_rxbuf_copy(struct flextcp_pl_flowst* fl,
       uint32_t rx_head, uint32_t len, void* dst);
+static inline void fast_rdmacq_bump(struct flextcp_pl_flowst* fl,
+      uint32_t id, uint8_t status);
+static inline void arx_rdma_cache_add(struct dataplane_context* ctx,
+      uint16_t ctx_id, uint64_t opaque, uint32_t wq_tail, uint32_t cq_head);
 
 int fast_rdmawq_bump(struct dataplane_context *ctx, uint32_t flow_id,
     uint32_t new_wq_head, uint32_t new_cq_tail)
@@ -30,15 +34,15 @@ int fast_rdmawq_bump(struct dataplane_context *ctx, uint32_t flow_id,
 
 /**
  * Work queue regions
- *  
- *    !!!!!!!!!!!!+++++++++++++%%%%%%%%%%%%%^^^^^^^^^^^^^!!!!!!!!!!!!!  
+ *
+ *    !!!!!!!!!!!!+++++++++++++%%%%%%%%%%%%%^^^^^^^^^^^^^!!!!!!!!!!!!!
  *  ||------------A------------B------------C------------D------------||
- * 
+ *
  *  A: cq_tail            !: Free/Unallocated WQEs
  *  B: cq_head            +: Completed WQEs unread by app
  *  C: wq_tail            %: Unack'd WQEs - req. sent but not ack'd
  *  D: wq_head            ^: In-progress WQEs - req. not yet sent by fp
- * 
+ *
  *  NOTE: head is always non-inclusive - i.e. [tail, head)
  */
 
@@ -52,7 +56,7 @@ int fast_rdmawq_bump(struct dataplane_context *ctx, uint32_t flow_id,
 
   /**
    *  TODO: Validate wq bump
-   * 
+   *
    *  NOTE: Is this too expensive ?!
    *  Should we trust the application input blindly ?
    */
@@ -115,6 +119,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
     struct flextcp_pl_flowst* fs, uint32_t prev_rx_head, uint32_t rx_bump)
 {
   uint32_t rq_head, rq_len, rx_head, rx_len, new_rx_head;
+  uint8_t cq_bump = 0;
   rq_head = fs->rq_head;
   rq_len = fs->wq_len;
   rx_head = prev_rx_head;
@@ -177,23 +182,30 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
                                             sizeof(struct rdma_wqe));
 
         /**
-         *  TODO: Parse the header.
-         *  If response, update the status on cq. Bump the app.
-         *  If read request, add to rq.
-         *  If write request, wait for pending data.
+         *  TODO: Implement RDMA_READ operations
          */
         uint8_t type = hdr->type;
         if ((type & RDMA_RESPONSE) == RDMA_RESPONSE)
         {
-          /* Not yet implemented */
-          /**
-           * TODO: Copy the response status to cq.
-           * Bump the application
-           */
-          fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
-          rq_head += sizeof(struct rdma_wqe);
-          if (rq_head >= rq_len)
-            rq_head -= rq_len;
+          if ((type & RDMA_READ) == RDMA_READ)
+          {
+            /* Not yet implemented */
+            fprintf(stderr, "%s():%d RDMA_READ Not yet implemented.\n", __func__, __LINE__);
+            abort();
+          }
+          else if ((type & RDMA_WRITE) == RDMA_WRITE)
+          {
+            /* No more data to be received */
+            fs->pending_rq_state = RDMA_RQ_PENDING_PARSE;
+
+            fast_rdmacq_bump(fs, f_beui32(hdr->id), hdr->status);
+            cq_bump = 1;
+          }
+          else
+          {
+            fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
+            abort();
+          }
         }
         else if ((type & RDMA_REQUEST) == RDMA_REQUEST)
         {
@@ -208,6 +220,9 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
 
           if ((type & RDMA_READ) == RDMA_READ)
           {
+            fprintf(stderr, "%s():%d RDMA_READ Not yet implemented.\n", __func__, __LINE__);
+            abort();
+
             wqe->type = (RDMA_RESPONSE | RDMA_READ);
             fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
             rq_head += sizeof(struct rdma_wqe);
@@ -220,13 +235,13 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
           }
           else
           {
-            fprintf(stderr, "Invalid RDMA request recevied\n");
+            fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
             abort();
           }
         }
         else
         {
-          fprintf(stderr, "Invalid RDMA request recevied\n");
+            fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
           abort();
         }
       }
@@ -234,8 +249,53 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
   }
 
   fs->rq_head = rq_head;
+  if (cq_bump)
+    arx_rdma_cache_add(ctx, fs->db_id, fs->opaque, fs->wq_tail, fs->cq_head);
 
   return 0;
+}
+
+static inline void arx_rdma_cache_add(struct dataplane_context* ctx,
+      uint16_t ctx_id, uint64_t opaque, uint32_t wq_tail, uint32_t cq_head)
+{
+  uint16_t id = ctx->arx_num++;
+
+  ctx->arx_ctx[id] = ctx_id;
+  ctx->arx_cache[id].type = FLEXTCP_PL_ARX_RDMAUPDATE;
+  ctx->arx_cache[id].msg.rdmaupdate.opaque = opaque;
+  ctx->arx_cache[id].msg.rdmaupdate.wq_tail = wq_tail;
+  ctx->arx_cache[id].msg.rdmaupdate.cq_head = cq_head;
+}
+
+static inline void fast_rdmacq_bump(struct flextcp_pl_flowst* fl,
+      uint32_t id, uint8_t status)
+{
+  uint32_t cq_head = fl->cq_head;
+  uint32_t wq_tail = fl->wq_tail;
+  uint32_t wq_len = fl->wq_len;
+
+  while (cq_head != wq_tail)
+  {
+    struct rdma_wqe* wqe = dma_pointer(fl->wq_base + cq_head,
+                                        sizeof(struct rdma_wqe));
+    if (wqe->status == RDMA_RESP_PENDING)
+    {
+      if (wqe->id != id)
+      {
+        fprintf(stderr, "%s():%d Invalid response received=%u expected=%u\n",
+            __func__, __LINE__, wqe->id, id);
+        abort();
+      }
+
+      wqe->status = status;
+    }
+
+    cq_head += sizeof(struct rdma_wqe);
+    if (cq_head >= wq_len)
+      cq_head -= wq_len;
+  }
+
+  fl->cq_head = cq_head;
 }
 
 static inline void fast_rdma_rxbuf_copy(struct flextcp_pl_flowst* fl,
@@ -268,12 +328,12 @@ static inline void fast_rdma_rxbuf_copy(struct flextcp_pl_flowst* fl,
   fl->rx_avail += len;
 }
 
-static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl, 
+static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
       uint32_t len, void* src)
 {
   uintptr_t buf1, buf2;
   uint32_t len1, len2;
-  
+
   uint32_t txbuf_len = fl->tx_len;
   uint32_t txbuf_head = fl->txb_head;
 
@@ -287,7 +347,7 @@ static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
     len1 = len;
     len2 = 0;
   }
-  
+
   buf1 = (uintptr_t) (fl->tx_base + txbuf_head);
   buf2 = (uintptr_t) (fl->tx_base);
 
@@ -298,12 +358,12 @@ static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
   txbuf_head += len;
   if (txbuf_head >= txbuf_len)
     txbuf_head -= txbuf_len;
-  
+
   fl->txb_head = txbuf_head;
   fl->tx_avail += len;
 }
 
-static inline void rdma_poll_workqueue(struct dataplane_context* ctx, 
+static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
         struct flextcp_pl_flowst* fl)
 {
   // NOTE: Flow state lock is already acquired !
@@ -355,7 +415,7 @@ static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
       hdr.flags = t_beui16(0);
 
       fast_rdma_txbuf_copy(fl, sizeof(struct rdma_hdr), &hdr);
-      
+
       free_txbuf_len -= sizeof(struct rdma_hdr);
       tx_seq = 0;
       wqe_tx_pending_len = wqe->len;
