@@ -580,6 +580,10 @@ unlock:
      * If rx_bump: fast_rdmarq_bump() -> if cq_update, arx_cache_add()
      * If tx_bump: rdma_poll_workqueue()
      */
+    if (rx_bump != 0)
+    {
+      fast_rdmarq_bump(ctx, fs, rx_pos, rx_bump);
+    }
 
     uint16_t type;
     type = FLEXTCP_PL_ARX_CONNUPDATE;
@@ -607,7 +611,7 @@ unlock:
     trace_event(FLEXNIC_PL_TREV_ARX, sizeof(te_arx), &te_arx);
 #endif
 
-    arx_cache_add(ctx, fs->db_id, fs->opaque, rx_bump, rx_pos, tx_bump, type);
+    // arx_cache_add(ctx, fs->db_id, fs->opaque, rx_bump, rx_pos, tx_bump, type);
   }
 
   /* Flow control: More receiver space? -> might need to start sending */
