@@ -133,7 +133,13 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
       wqe_pending_rx = wqe->len;
       rx_bump_len = MIN(wqe_pending_rx, rx_bump);
       void* mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
-      fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, mr_ptr);
+      if (wqe->status == RDMA_TX_PENDING)
+        fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, mr_ptr);
+      else
+      {
+        /* Ignore this data */
+        fs->rx_avail += rx_bump_len;
+      }
 
       rx_head += rx_bump_len;
       if (rx_head >= rx_len)
@@ -180,6 +186,10 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
         if ((type & RDMA_RESPONSE) == RDMA_RESPONSE)
         {
           /* Not yet implemented */
+          /**
+           * TODO: Copy the response status to cq.
+           * Bump the application
+           */
           fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
           rq_head += sizeof(struct rdma_wqe);
           if (rq_head >= rq_len)
@@ -190,7 +200,10 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
           wqe->id = f_beui32(hdr->id);
           wqe->len = f_beui32(hdr->length);
           wqe->loff = f_beui32(hdr->offset);
-          wqe->status = RDMA_TX_PENDING;
+          if (wqe->loff + wqe->len > fs->mr_len)
+            wqe->status = RDMA_OUT_OF_BOUNDS;
+          else
+            wqe->status = RDMA_TX_PENDING;
           wqe->roff = 0;
 
           if ((type & RDMA_READ) == RDMA_READ)
@@ -245,8 +258,8 @@ static inline void fast_rdma_rxbuf_copy(struct flextcp_pl_flowst* fl,
     len2 = 0;
   }
 
-  buf1 = (uintptr_t) dma_pointer(rxbuf_base + rx_head, len1);
-  buf2 = (uintptr_t) dma_pointer(rxbuf_base, len2);
+  buf1 = (uintptr_t) (rxbuf_base + rx_head);
+  buf2 = (uintptr_t) (rxbuf_base);
 
   dma_read(buf1, len1, dst);
   if (len2)
