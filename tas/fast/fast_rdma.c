@@ -12,7 +12,7 @@
 #include "tcp_common.h"
 
 #define RDMA_RQ_PENDING_PARSE 0x0
-#define RDMA_RQ_PENDING_DATA  0xf
+#define RDMA_RQ_PENDING_DATA  0x10
 
 static inline void rdma_poll_workqueue(struct dataplane_context* ctx, 
       struct flextcp_pl_flowst* fl);
