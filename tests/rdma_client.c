@@ -8,7 +8,7 @@
 
 int main()
 {
-  const char ip[] = "10.0.0.4";
+  const char ip[] = "10.0.0.101";
   rdma_init();
   struct sockaddr_in remoteaddr;
   remoteaddr.sin_family = AF_INET;
@@ -22,5 +22,15 @@ int main()
 
   if (fd < 0)
     fprintf(stderr, "Connection failed\n");
+
+  getchar();
+
+  char *ptr = (char*) mr_base;
+  for (int i = 0; i < 512; i++)
+  {
+    fprintf(stderr, "%c", ptr[i]);
+  }
+  fprintf(stderr, "\n");
+
   return 0;
 }

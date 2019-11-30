@@ -24,13 +24,13 @@ int main()
     if (fd < 0)
         fprintf(stderr, "Connection failed\n");
 
-    const char name[] = "RAJATH";
+    const char name[] = "foobar";
     int i = 0;
     char* new_mr_base = mr_base;
     while (1)
     {
       int len = snprintf(new_mr_base, 100, "%s%u", name, i);
-      int ret = rdma_write(fd, len, new_mr_base - (char*) mr_base, 0);
+      int ret = rdma_write(fd, len, new_mr_base - (char*) mr_base, new_mr_base - (char*) mr_base);
       new_mr_base += len;
       fprintf(stderr, "WRITE ret=%d\n", ret);
 
