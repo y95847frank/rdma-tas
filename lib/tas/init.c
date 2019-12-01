@@ -925,11 +925,10 @@ static void txq_probe(struct flextcp_context *ctx, unsigned n)
 
 int rdma_conn_bump(struct flextcp_context *ctx,
 		struct flextcp_connection *c){
-
-    // TODO: Do we need txq_probe() here?
-
 	struct flextcp_pl_atx *atx;
     assert(c->status == CONN_OPEN);
+    // TODO: Only call txq_probe when we run out of space
+    txq_probe(ctx, ctx->txq_len);
     if (flextcp_context_tx_alloc(ctx, &atx, c->fn_core) != 0) {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
 		    return -1;
