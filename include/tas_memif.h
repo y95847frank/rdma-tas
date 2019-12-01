@@ -362,7 +362,9 @@ struct flextcp_pl_flowst {
   uint8_t pending_rq_buf[16];
   /** RQ parsing state */
   uint32_t pending_rq_state;
-// 212
+  /** Offset to next segment in partially transmitted RQ entry */
+  uint32_t rqe_tx_seq;
+// 216
 } __attribute__((packed, aligned(64)));
 
 #define FLEXNIC_PL_FLOWHTE_VALID  (1 << 31)

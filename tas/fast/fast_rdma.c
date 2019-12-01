@@ -138,7 +138,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
       wqe_pending_rx = wqe->len;
       rx_bump_len = MIN(wqe_pending_rx, rx_bump);
       void* mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
-      if (wqe->status == RDMA_TX_PENDING)
+      if (wqe->status == RDMA_PENDING)
         fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, mr_ptr);
       else
       {
@@ -156,6 +156,9 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
 
       if (wqe_pending_rx == 0)
       {
+        if (wqe->status == RDMA_PENDING)
+          wqe->status = RDMA_SUCCESS;
+
         fs->pending_rq_state = RDMA_RQ_PENDING_PARSE;
         rq_head += sizeof(struct rdma_wqe);
         if (rq_head >= rq_len)
@@ -215,7 +218,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
           if (wqe->loff + wqe->len > fs->mr_len)
             wqe->status = RDMA_OUT_OF_BOUNDS;
           else
-            wqe->status = RDMA_TX_PENDING;
+            wqe->status = RDMA_PENDING;
           wqe->roff = 0;
 
           if ((type & RDMA_READ) == RDMA_READ)
@@ -223,7 +226,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
             fprintf(stderr, "%s():%d RDMA_READ Not yet implemented.\n", __func__, __LINE__);
             abort();
 
-            wqe->type = (RDMA_RESPONSE | RDMA_READ);
+            wqe->type = (RDMA_OP_READ);
             fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
             rq_head += sizeof(struct rdma_wqe);
             if (rq_head >= rq_len)
@@ -231,7 +234,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
           }
           else if ((type & RDMA_WRITE) == RDMA_WRITE)
           {
-            wqe->type = (RDMA_RESPONSE | RDMA_WRITE);
+            wqe->type = (RDMA_OP_WRITE);
           }
           else
           {
@@ -363,13 +366,85 @@ static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
   fl->tx_avail += len;
 }
 
+static inline void rdma_poll_rqueue(struct dataplane_context* ctx,
+        struct flextcp_pl_flowst* fl)
+{
+  // NOTE: Flow state lock is already acquired !
+  uint32_t rq_head, rq_tail, tx_seq, tx_len;
+  uint32_t free_txbuf_len, rqe_tx_pending_len;
+  struct rdma_wqe* rqe;
+  struct rdma_hdr hdr;
+  void* mr_buf;
+
+  rq_head = fl->rq_head;
+  rq_tail = fl->rq_tail;
+  tx_seq = fl->rqe_tx_seq;
+  free_txbuf_len = fl->tx_len - fl->tx_avail - fl->tx_sent;
+
+  while (rq_tail != rq_head && free_txbuf_len > 0)
+  {
+    rqe = dma_pointer(fl->rq_base + rq_tail, sizeof(struct rdma_wqe));
+
+    /* Partially transmitted workqueue entry */
+    if (rqe->status == RDMA_TX_PENDING)
+    {
+      rqe_tx_pending_len = rqe->len - tx_seq;
+    }
+    else
+    {
+      // Do not segment RDMA header
+      if (free_txbuf_len < sizeof(struct rdma_hdr))
+      {
+        break;
+      }
+
+      hdr.type = RDMA_RESPONSE | (rqe->type == RDMA_OP_READ ? RDMA_READ : RDMA_WRITE);
+      hdr.status = rqe->status;
+      hdr.length = t_beui32(rqe->len);
+      hdr.offset = t_beui32(rqe->roff);
+      hdr.id = t_beui32(rqe->id);
+      hdr.flags = t_beui16(0);
+
+      fast_rdma_txbuf_copy(fl, sizeof(struct rdma_hdr), &hdr);
+      free_txbuf_len -= sizeof(struct rdma_hdr);
+      tx_seq = 0;
+
+      if (!(rqe->status == RDMA_SUCCESS && rqe->type == RDMA_OP_READ))
+      {
+        rqe->status = RDMA_TX_PENDING;
+        rqe_tx_pending_len = rqe->len;
+      }
+      else
+        goto NEXT_RQE;
+    }
+
+    tx_len = MIN(rqe_tx_pending_len, free_txbuf_len);
+    mr_buf = dma_pointer(fl->mr_base + rqe->loff + tx_seq, rqe_tx_pending_len);
+    fast_rdma_txbuf_copy(fl, tx_len, mr_buf);
+    tx_seq += tx_len;
+
+    free_txbuf_len -= tx_len;
+    if (tx_seq == rqe->len)
+    {
+      rqe->status = RDMA_SUCCESS;
+
+NEXT_RQE:
+      rq_tail += sizeof(struct rdma_wqe);
+      if (rq_tail >= fl->wq_len)
+        rq_tail -= fl->wq_len;
+
+      tx_seq = 0;
+    }
+  }
+
+  fl->rq_tail = rq_tail;
+  fl->rqe_tx_seq = tx_seq;
+}
+
 static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
         struct flextcp_pl_flowst* fl)
 {
   // NOTE: Flow state lock is already acquired !
-
-  /* There is atleast one unprocessed workqueue entry */
-  assert(fl->wq_head != fl->wq_tail);
 
   uint32_t wq_head, wq_tail, tx_seq, tx_len;
   uint32_t free_txbuf_len, wqe_tx_pending_len;
