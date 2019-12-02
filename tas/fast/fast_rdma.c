@@ -441,6 +441,82 @@ NEXT_RQE:
   fl->rqe_tx_seq = tx_seq;
 }
 
+/* Transmit atmost one WQE */
+static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
+    struct rdma_wqe* wqe, int is_request)
+{
+  uint32_t tx_seq, tx_len;
+  uint32_t free_txbuf_len, wqe_tx_pending_len;
+  struct rdma_hdr hdr;
+  void* mr_buf;
+
+  tx_seq = fl->wqe_tx_seq;
+  free_txbuf_len = fl->tx_len - fl->tx_avail - fl->tx_sent;
+
+  if (wqe->status == RDMA_TX_PENDING)
+  {
+    wqe_tx_pending_len = wqe->len - tx_seq;
+  }
+  else
+  {
+    hdr.type = (is_request ? RDMA_REQUEST : RDMA_RESPONSE)
+                 | (wqe->type == RDMA_OP_READ ? RDMA_READ : RDMA_WRITE);
+    hdr.status = (is_request ? 0 : wqe->status);
+    hdr.length = t_beui32(wqe->len);
+    hdr.offset = t_beui32(wqe->roff);
+    hdr.id = t_beui32(wqe->id);
+    hdr.flags = t_beui16(0);
+
+    fast_rdma_txbuf_copy(fl, sizeof(struct rdma_hdr), &hdr);
+
+    free_txbuf_len -= sizeof(struct rdma_hdr);
+    tx_seq = 0;
+    wqe_tx_pending_len = wqe->len;
+
+    if (is_request)
+    {
+      if (wqe->type == RDMA_OP_READ)
+      {
+        wqe->status = RDMA_RESP_PENDING;
+        return 0;
+      }
+      else
+      {
+        wqe->status = RDMA_TX_PENDING;
+      }
+    }
+    else
+    {
+      if (wqe->status == RDMA_SUCCESS && wqe->type == RDMA_OP_READ)
+      {
+        wqe->status = RDMA_TX_PENDING;
+      }
+      else
+      {
+        return 0;
+      }
+    }    
+  }
+
+  tx_len = MIN(wqe_tx_pending_len, free_txbuf_len);
+  mr_buf = dma_pointer(fl->mr_base + wqe->loff + tx_seq, wqe_tx_pending_len);
+  fast_rdma_txbuf_copy(fl, tx_len, mr_buf);
+  tx_seq += tx_len;
+
+  free_txbuf_len -= tx_len;
+  wqe_tx_pending_len -= tx_len;
+
+  if (!wqe_tx_pending_len)
+  {
+    if (is_request)
+      wqe->status = RDMA_RESP_PENDING;
+    else
+      wqe->status = RDMA_SUCCESS;
+  }
+
+  return wqe_tx_pending_len;
+}
+
 static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
         struct flextcp_pl_flowst* fl)
 {
