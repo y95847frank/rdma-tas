@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "tas_ll.h"
 #include "tas_rdma.h"
@@ -159,13 +160,7 @@ int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
         ev = compl_evs + i;
 
         // Copy the wqe data
-        ev->id = wqe->id;
-        ev->type = wqe->type;
-        ev->status = wqe->status;
-        ev->flags = wqe->flags;
-        ev->loff = wqe->loff;
-        ev->roff = wqe->roff;
-        ev->len = wqe->len;
+        memcpy(ev, wqe, sizeof(struct rdma_wqe));
 
         // Update queue pointers and length
         c->cq_tail = (c->cq_tail + sizeof(struct rdma_wqe)) % c->wq_size;
