@@ -155,8 +155,9 @@ int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
     }
     int i;
     struct rdma_wqe* wqe;
+    struct rdma_wqe* ev;
     for(i = 0; i < num; i++){
-        wqe = c->cq_tail;
+        wqe = (struct rdma_wqe*)(c->wq_base + c->cq_tail);
         ev = compl_evs + i;
 
         // Copy the wqe data

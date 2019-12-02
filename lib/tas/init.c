@@ -212,13 +212,13 @@ static int kernel_poll(struct flextcp_context *ctx, int num,
 
 int rdma_fastpath_poll(struct flextcp_context *ctx,
         struct flextcp_connection *conn, int num){
-    int i, j;
+    int i;
     struct flextcp_pl_arx *arx_q, *arx;
     uint32_t head;
     struct flextcp_connection *rx_conn;
 
     arx_q = (struct flextcp_pl_arx *) ctx->queues[conn->fn_core].rxq_base;
-    head = ctx->queues[ctx->fn_core].rxq_head;
+    head = ctx->queues[conn->fn_core].rxq_head;
     for (i = 0; i < num;) {
         arx = &arx_q[head / sizeof(*arx)];
         if (arx->type == FLEXTCP_PL_ARX_INVALID) {
@@ -247,7 +247,7 @@ int rdma_fastpath_poll(struct flextcp_context *ctx,
             head -= ctx->rxq_len;
         }
     }
-    ctx->queues[ctx->fn_core].rxq_head = head;
+    ctx->queues[conn->fn_core].rxq_head = head;
     return 0;
 }
 
