@@ -249,6 +249,13 @@ int flextcp_context_poll(struct flextcp_context *ctx, int num,
     struct flextcp_event *events);
 
 /**
+ * Poll fastpath rx queue for 'num' bytes of data in the provided
+ * connection's completion queue.
+ */
+int rdma_fastpath_poll(struct flextcp_context *ctx,
+    struct flextcp_connection *conn, int num);
+
+/**
  * Bump fast path for a new RDMA wq entry
  */
 int rdma_conn_bump(struct flextcp_context *ctx,

@@ -210,6 +210,42 @@ static int kernel_poll(struct flextcp_context *ctx, int num,
   return (j == -1 ? -1 : 0);
 }
 
+int rdma_fastpath_poll(struct flextcp_context *ctx,
+        struct flextcp_connection *conn, int num){
+    int i, j;
+    struct flextcp_pl_arx *arx_q, *arx;
+    uint32_t head;
+    struct flextcp_connection *rx_conn;
+
+    arx_q = (struct flextcp_pl_arx *) ctx->queues[conn->fn_core].rxq_base;
+    head = ctx->queues[ctx->fn_core].rxq_head;
+    for (i = 0; i < num;) {
+        arx = &arx_q[head / sizeof(*arx)];
+        if (arx->type == FLEXTCP_PL_ARX_INVALID) {
+            break;
+        } else if (arx->type == FLEXTCP_PL_ARX_RDMAUPDATE) {
+            rx_conn = OPAQUE_PTR(arx->msg.rdmaupdate.opaque);
+            rx_conn->wq_tail = arx->msg.rdmaupdate.wq_tail;
+            if (arx->msg.rdmaupdate.cq_head > rx_conn->cq_tail){
+                rx_conn->cq_len = arx->msg.rdmaupdate.cq_head - rx_conn->cq_tail;
+            }else{
+                rx_conn->cq_len = arx->msg.rdmaupdate.cq_head + rx_conn->wq_size - rx_conn->wq_tail;
+            }
+            i = conn->cq_len;
+        } else {
+            fprintf(stderr, "flextcp_context_poll: kout type=%u head=%x\n", arx->type, head);
+        }
+        arx->type = 0;
+        /* next entry */
+        head += sizeof(*arx);
+        if (head >= ctx->rxq_len) {
+            head -= ctx->rxq_len;
+        }
+    }
+    ctx->queues[ctx->fn_core].rxq_head = head;
+    return 0;
+}
+
 static int fastpath_poll(struct flextcp_context *ctx, int num,
     struct flextcp_event *events, int *used)
 {
