@@ -143,10 +143,8 @@ int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
         return -1;
     }
     struct flextcp_connection* c = &s->c;
-    while (1)
+    while (c->cq_len < num * sizeof(struct rdma_wqe))
     {
-        if (c->cq_len >= num * sizeof(struct rdma_wqe))
-            break;
         ret = rdma_fastpath_poll(appctx, c, num * sizeof(struct rdma_wqe));
         if (ret < 0){
             fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
