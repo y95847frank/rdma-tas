@@ -574,6 +574,10 @@ static inline void fast_rdma_poll(struct dataplane_context* ctx,
         goto NEXT_WQE;
       }
     }
+    else
+    {
+      wqe = dma_pointer(fl->rq_base + rq_tail, sizeof(struct rdma_wqe));
+    }
 
     /* New request/response */
     if (tx_seq == 0)
@@ -598,16 +602,16 @@ NEXT_WQE:
     }
     else
     {
-      wq_head += sizeof(struct rdma_wqe);
-      if (wq_head >= fl->wq_len)
-        wq_head -= fl->wq_len;
+      wq_tail += sizeof(struct rdma_wqe);
+      if (wq_tail >= fl->wq_len)
+        wq_tail -= fl->wq_len;
     }
     tx_seq = 0;
     is_rqe = (is_rqe ? 0 : 1);
     free_txbuf_len = fl->tx_len - fl->tx_avail - fl->tx_sent;
   }
 
-  fl->wq_head = wq_head;
+  fl->wq_tail = wq_tail;
   fl->rq_tail = rq_tail;
   if (is_rqe)
     fl->rqe_tx_seq = tx_seq;
