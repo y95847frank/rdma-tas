@@ -293,6 +293,10 @@ static inline void fast_rdmacq_bump(struct flextcp_pl_flowst* fl,
       }
 
       wqe->status = status;
+      cq_head += sizeof(struct rdma_wqe);
+      if (cq_head >= wq_len)
+        cq_head -= wq_len;
+      break;
     }
 
     cq_head += sizeof(struct rdma_wqe);
