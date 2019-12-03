@@ -80,6 +80,8 @@ int fast_rdmawq_bump(struct dataplane_context *ctx, uint32_t flow_id,
     uint32_t new_wq_head, uint32_t new_cq_tail);
 int fast_rdmarq_bump(struct dataplane_context* ctx,
     struct flextcp_pl_flowst* fs, uint32_t prev_rx_head, uint32_t rx_bump);
+void fast_rdma_poll(struct dataplane_context* ctx,
+      struct flextcp_pl_flowst* fl);
 
 /*****************************************************************************/
 /* Helpers */

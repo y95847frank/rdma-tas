@@ -585,6 +585,22 @@ unlock:
       fast_rdmarq_bump(ctx, fs, rx_pos, rx_bump);
     }
 
+    uint32_t old_avail, new_avail;
+    // copy packets into txbuf
+    old_avail = tcp_txavail(fs, NULL);
+    fast_rdma_poll(ctx, fs);
+    new_avail = tcp_txavail(fs, NULL);
+
+    if (old_avail < new_avail) {
+      if (qman_set(&ctx->qman, flow_id, fs->tx_rate, new_avail -
+            old_avail, TCP_MSS, QMAN_SET_RATE | QMAN_SET_MAXCHUNK
+            | QMAN_ADD_AVAIL) != 0)
+      {
+        fprintf(stderr, "fast_rdmawq_bump: qman_set failed, UNEXPECTED\n");
+        abort();
+      }
+    }
+
     uint16_t type;
     type = FLEXTCP_PL_ARX_CONNUPDATE;
 

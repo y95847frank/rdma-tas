@@ -14,8 +14,8 @@
 #define RDMA_RQ_PENDING_PARSE 0x0
 #define RDMA_RQ_PENDING_DATA  0x10
 
-static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
-      struct flextcp_pl_flowst* fl);
+// static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
+//       struct flextcp_pl_flowst* fl);
 static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
       uint32_t len, void* src);
 static inline void fast_rdma_rxbuf_copy(struct flextcp_pl_flowst* fl,
@@ -24,6 +24,8 @@ static inline void fast_rdmacq_bump(struct flextcp_pl_flowst* fl,
       uint32_t id, uint8_t status);
 static inline void arx_rdma_cache_add(struct dataplane_context* ctx,
       uint16_t ctx_id, uint64_t opaque, uint32_t wq_tail, uint32_t cq_head);
+void fast_rdma_poll(struct dataplane_context* ctx,
+      struct flextcp_pl_flowst* fl);
 
 int fast_rdmawq_bump(struct dataplane_context *ctx, uint32_t flow_id,
     uint32_t new_wq_head, uint32_t new_cq_tail)
@@ -90,7 +92,7 @@ int fast_rdmawq_bump(struct dataplane_context *ctx, uint32_t flow_id,
     uint32_t old_avail, new_avail;
     // copy packets into txbuf
     old_avail = tcp_txavail(fs, NULL);
-    rdma_poll_workqueue(ctx, fs);
+    fast_rdma_poll(ctx, fs);
     new_avail = tcp_txavail(fs, NULL);
 
     if (old_avail < new_avail) {
@@ -517,7 +519,7 @@ static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
   return wqe_tx_pending_len;
 }
 
-static inline void fast_rdma_poll(struct dataplane_context* ctx,
+void fast_rdma_poll(struct dataplane_context* ctx,
       struct flextcp_pl_flowst* fl)
 {
   uint32_t wq_head, wq_tail, rq_head, rq_tail, tx_seq;
@@ -619,11 +621,11 @@ NEXT_WQE:
     fl->wqe_tx_seq = tx_seq;
 }
 
-static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
-        struct flextcp_pl_flowst* fl)
-{
-  fast_rdma_poll(ctx, fl);
-}
+// static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
+//         struct flextcp_pl_flowst* fl)
+// {
+//   fast_rdma_poll(ctx, fl);
+// }
 
 // static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
 //         struct flextcp_pl_flowst* fl)
