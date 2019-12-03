@@ -517,35 +517,72 @@ static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
   return wqe_tx_pending_len;
 }
 
-static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
-        struct flextcp_pl_flowst* fl)
+static inline void fast_rdma_poll(struct dataplane_context* ctx,
+      struct flextcp_pl_flowst* fl)
 {
-  uint32_t wq_head, wq_tail, tx_seq;
-  uint32_t free_txbuf_len, ret;
+  uint32_t wq_head, wq_tail, rq_head, rq_tail, tx_seq;
+  uint32_t free_txbuf_len, ret, is_rqe;
   struct rdma_wqe* wqe;
 
   wq_head = fl->wq_head;
   wq_tail = fl->wq_tail;
-  tx_seq = fl->wqe_tx_seq;
+  rq_head = fl->rq_head;
+  rq_tail = fl->rq_tail;
   free_txbuf_len = fl->tx_len - fl->tx_avail - fl->tx_sent;
 
-  while (wq_tail != wq_head && free_txbuf_len > 0)
+  if (fl->wqe_tx_seq > 0)
   {
-    wqe = dma_pointer(fl->wq_base + wq_tail, sizeof(struct rdma_wqe));
-    if (tx_seq == 0)
+    is_rqe = 0;
+    tx_seq = fl->wqe_tx_seq;
+  }
+  else if (fl->rqe_tx_seq > 0)
+  {
+    is_rqe = 1;
+    tx_seq = fl->rqe_tx_seq;
+  }
+  else
+  {
+    is_rqe = 0;
+    tx_seq = 0;
+  }
+
+  while (free_txbuf_len > 0)
+  {
+    if (rq_head == rq_tail && wq_head == wq_tail)
+      break;
+
+    if (!is_rqe && wq_head == wq_tail)
     {
+      is_rqe = 1;
+      continue;
+    }
+
+    if (is_rqe && rq_head == rq_tail)
+    {
+      is_rqe = 0;
+      continue;
+    }
+
+    if (!is_rqe)
+    {
+      wqe = dma_pointer(fl->wq_base + wq_tail, sizeof(struct rdma_wqe));
+
       /* New WQE to be processed */
       if (UNLIKELY(wqe->loff + wqe->len > fl->mr_len))
       {
         wqe->status = RDMA_OUT_OF_BOUNDS;
         goto NEXT_WQE;
       }
+    }
 
+    /* New request/response */
+    if (tx_seq == 0)
+    {
       if (free_txbuf_len < sizeof(struct rdma_hdr))
         break;
     }
 
-    ret = fast_rdmawqe_tx(fl, wqe, 1);
+    ret = fast_rdmawqe_tx(fl, wqe, !is_rqe);
     if (ret > 0)
     {
       tx_seq = wqe->len - ret;
@@ -553,17 +590,84 @@ static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
     }
 
 NEXT_WQE:
-    wq_tail += sizeof(struct rdma_wqe);
-    if (wq_tail >= fl->wq_len)
-      wq_tail -= fl->wq_len;
-
+    if (is_rqe)
+    {
+      rq_tail += sizeof(struct rdma_wqe);
+      if (rq_tail >= fl->wq_len)
+        rq_tail -= fl->wq_len;
+    }
+    else
+    {
+      wq_head += sizeof(struct rdma_wqe);
+      if (wq_head >= fl->wq_len)
+        wq_head -= fl->wq_len;
+    }
     tx_seq = 0;
+    is_rqe = (is_rqe ? 0 : 1);
     free_txbuf_len = fl->tx_len - fl->tx_avail - fl->tx_sent;
   }
 
-  fl->wq_tail = wq_tail;
-  fl->wqe_tx_seq = tx_seq;
+  fl->wq_head = wq_head;
+  fl->rq_tail = rq_tail;
+  if (is_rqe)
+    fl->rqe_tx_seq = tx_seq;
+  else
+    fl->wqe_tx_seq = tx_seq;
 }
+
+static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
+        struct flextcp_pl_flowst* fl)
+{
+  fast_rdma_poll(ctx, fl);
+}
+
+// static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
+//         struct flextcp_pl_flowst* fl)
+// {
+//   uint32_t wq_head, wq_tail, tx_seq;
+//   uint32_t free_txbuf_len, ret;
+//   struct rdma_wqe* wqe;
+
+//   wq_head = fl->wq_head;
+//   wq_tail = fl->wq_tail;
+//   tx_seq = fl->wqe_tx_seq;
+//   free_txbuf_len = fl->tx_len - fl->tx_avail - fl->tx_sent;
+
+//   while (wq_tail != wq_head && free_txbuf_len > 0)
+//   {
+//     wqe = dma_pointer(fl->wq_base + wq_tail, sizeof(struct rdma_wqe));
+//     if (tx_seq == 0)
+//     {
+//       /* New WQE to be processed */
+//       if (UNLIKELY(wqe->loff + wqe->len > fl->mr_len))
+//       {
+//         wqe->status = RDMA_OUT_OF_BOUNDS;
+//         goto NEXT_WQE;
+//       }
+
+//       if (free_txbuf_len < sizeof(struct rdma_hdr))
+//         break;
+//     }
+
+//     ret = fast_rdmawqe_tx(fl, wqe, 1);
+//     if (ret > 0)
+//     {
+//       tx_seq = wqe->len - ret;
+//       break;
+//     }
+
+// NEXT_WQE:
+//     wq_tail += sizeof(struct rdma_wqe);
+//     if (wq_tail >= fl->wq_len)
+//       wq_tail -= fl->wq_len;
+
+//     tx_seq = 0;
+//     free_txbuf_len = fl->tx_len - fl->tx_avail - fl->tx_sent;
+//   }
+
+//   fl->wq_tail = wq_tail;
+//   fl->wqe_tx_seq = tx_seq;
+// }
 
 // static inline void rdma_poll_workqueue(struct dataplane_context* ctx,
 //         struct flextcp_pl_flowst* fl)
