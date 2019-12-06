@@ -37,23 +37,18 @@ int main()
         int ret = rdma_write(fd, len, new_mr_base - (char*) mr_base, new_mr_base - (char*) mr_base);
         new_mr_base += len;
         fprintf(stderr, "WRITE ret=%d\n", ret);
-
+        if (ret >= 0)
+            continue;
+        ret = rdma_cq_poll(fd, cqe, 64);
+        fprintf(stderr, "CQ_POLL ret=%d\n", ret);
         if (ret < 0)
             break;
-        i++;
-        if (i % 50 == 0){
-            ret = rdma_cq_poll(fd, cqe, 50);
-            fprintf(stderr, "CQ_POLL ret=%d\n", ret);
-            if (ret < 0){
-                break;
-            }
-            int j;
-            for(j = 0; j < 50; j++){
-                if(cqe[j].status != RDMA_SUCCESS){
-                    fprintf(stderr, "RDMA_STATUS: id=%d, status=%d\n",
-                            cqe[j].id, cqe[j].status);
-                    return -1;
-                }
+        int j;
+        for(j = 0; j < ret; j++){
+            if(cqe[j].status != RDMA_SUCCESS){
+                fprintf(stderr, "RDMA_STATUS: id=%d, status=%d\n",
+                        cqe[j].id, cqe[j].status);
+                return -1;
             }
         }
     }

@@ -142,7 +142,7 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
  * @param fd    File Descriptor obtained on successful accept()/connect()
  * @param compl_evs Reference to RDMA event descriptors.
  * @param num   Number of events to read
- * @return -1 on FAILURE, 0 on SUCCESS
+ * @return -1 on FAILURE, number of completion events on SUCCESS
  *          Completion events are copied to *compl_evs*.
  */
 int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num);

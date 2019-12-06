@@ -144,19 +144,19 @@ int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
         return -1;
     }
     struct flextcp_connection* c = &s->c;
-    while (c->cq_len < num * sizeof(struct rdma_wqe))
+    if (c->cq_len < num * sizeof(struct rdma_wqe))
     {
         ret = rdma_fastpath_poll(appctx, c, num * sizeof(struct rdma_wqe));
         if (ret < 0){
             fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
             return -1;
         }
-        flextcp_block(appctx, CONTROL_TIMEOUT);
     }
-    int i;
+
+    int i = 0;
     struct rdma_wqe* wqe;
     struct rdma_wqe* ev;
-    for(i = 0; i < num; i++){
+    while(c->cq_len > 0 && i < num){
         wqe = (struct rdma_wqe*)(c->wq_base + c->cq_tail);
         ev = compl_evs + i;
 
@@ -166,6 +166,7 @@ int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
         // Update queue pointers and length
         c->cq_tail = (c->cq_tail + sizeof(struct rdma_wqe)) % c->wq_size;
         c->cq_len -= sizeof(struct rdma_wqe);
+        i += 1;
     }
-    return 0;
+    return i;
 }
