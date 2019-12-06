@@ -72,4 +72,14 @@ uint32_t qman_next_ts(struct qman_thread *t, uint32_t cur_ts);
 
 void *util_create_shmsiszed(const char *name, size_t size, void *addr);
 
+#if 1
+#include <utils_sync.h>
+
+#define fs_lock(fs) util_spin_lock(&fs->lock)
+#define fs_unlock(fs) util_spin_unlock(&fs->lock)
+#else
+#define fs_lock(fs) do {} while (0)
+#define fs_unlock(fs) do {} while (0)
+#endif
+
 #endif /* ndef INTERNAL_H_ */

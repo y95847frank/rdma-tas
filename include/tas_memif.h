@@ -238,6 +238,9 @@ struct flextcp_pl_appctx {
 #define FLEXNIC_PL_FLOWST_RXFIN 32
 #define FLEXNIC_PL_FLOWST_RX_MASK (~63ULL)
 
+/**
+ * TODO: Consider rearranging struct attributes for cache performance.
+ */
 /** Flow state registers */
 struct flextcp_pl_flowst {
   /********************************************************/
@@ -326,6 +329,42 @@ struct flextcp_pl_flowst {
   uint32_t rtt_est;
 
 // 128
+
+  /********************RDMA additions *********************/
+  /** Offset in buffer for new data */
+  uint32_t txb_head;
+  /** Offset to next segment in partially transmitted WQ entry */
+  uint32_t wqe_tx_seq;
+  /** Base address of Work/Completion queue buffer */
+  uint64_t wq_base;
+  /** Base address of Reponse queue buffer */
+  uint64_t rq_base;
+  /** Base address of Memory Region */
+  uint64_t mr_base;
+  /** Work/Completion queue size in bytes */
+  uint32_t wq_len;
+  /** Memory region size in bytes */
+  uint32_t mr_len;
+  /** Offset to which new WQE will be added */
+  uint32_t wq_head;
+  /** Offset of the next WQE to be processed */
+  uint32_t wq_tail;
+  /** Offset of the oldest ack'd WQE unprocessed by application */
+  uint32_t cq_head;
+  /** Offset of the latest ack'd WQE unprocessed by application */
+  uint32_t cq_tail;
+  /** Offset of the latest unack'd request */
+  uint32_t rq_head;
+  /** Offset of the oldest unack'd request */
+  uint32_t rq_tail;
+// 192
+  /** Buffer for partially received request */
+  uint8_t pending_rq_buf[16];
+  /** RQ parsing state */
+  uint32_t pending_rq_state;
+  /** Offset to next segment in partially transmitted RQ entry */
+  uint32_t rqe_tx_seq;
+// 216
 } __attribute__((packed, aligned(64)));
 
 #define FLEXNIC_PL_FLOWHTE_VALID  (1 << 31)

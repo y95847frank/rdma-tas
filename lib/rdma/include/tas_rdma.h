@@ -23,6 +23,8 @@ enum rdma_op_type_e {
 enum rdma_op_status_e {
     RDMA_SUCCESS,
     RDMA_PENDING,
+    RDMA_TX_PENDING,
+    RDMA_RESP_PENDING,
     RDMA_CONN_FAILURE,
     RDMA_OUT_OF_BOUNDS
 };

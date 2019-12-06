@@ -33,7 +33,8 @@ TASCOMMON_OBJS = $(addprefix tas/,tas.o config.o shm.o)
 SLOWPATH_OBJS = $(addprefix tas/slow/,kernel.o packetmem.o appif.o appif_ctx.o \
 	nicif.o cc.o tcp.o arp.o routing.o kni.o)
 FASTPATH_OBJS = $(addprefix tas/fast/,fastemu.o network.o \
-		    qman.o trace.o fast_kernel.o fast_appctx.o fast_flows.o)
+		    qman.o trace.o fast_kernel.o fast_appctx.o fast_flows.o \
+			fast_rdma.o)
 STACK_OBJS = $(addprefix lib/tas/,init.o kernel.o conn.o connect.o)
 SOCKETS_OBJS = $(addprefix lib/sockets/,control.o transfer.o context.o manage_fd.o \
 	epoll.o libc.o)
@@ -99,7 +100,7 @@ tests/libtas/tas_ll: tests/libtas/tas_ll.o tests/libtas/harness.o \
 tests/tas_unit/%.o: CFLAGS+=-Itas/include
 tests/tas_unit/fastpath: LDLIBS+=-lrte_eal
 tests/tas_unit/fastpath: tests/tas_unit/fastpath.o tests/testutils.o \
-  tas/fast/fast_flows.o
+  tas/fast/fast_flows.o tas/fast/fast_rdma.o
 
 tests/full/%.o: CFLAGS+=-Itas/include
 tests/full/tas_linux: tests/full/tas_linux.o tests/full/fulltest.o lib/libtas.so
