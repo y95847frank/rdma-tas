@@ -30,6 +30,9 @@ int main()
     struct rdma_wqe cqe[50];
     while (1)
     {
+        if (new_mr_base + 100 >= ((char*) mr_base + mr_len))
+            new_mr_base = mr_base;
+
         int len = snprintf(new_mr_base, 100, "%s%u", name, i);
         int ret = rdma_write(fd, len, new_mr_base - (char*) mr_base, new_mr_base - (char*) mr_base);
         new_mr_base += len;
