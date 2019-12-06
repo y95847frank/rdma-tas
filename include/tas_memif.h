@@ -155,6 +155,7 @@ STATIC_ASSERT(sizeof(struct flextcp_pl_arx) == 32, arx_size);
 /* App TX queue */
 
 #define FLEXTCP_PL_ATX_CONNUPDATE 0x1
+#define FLEXTCP_PL_ATX_RDMAUPDATE 0x2
 
 #define FLEXTCP_PL_ATX_FLTXDONE  0x1
 

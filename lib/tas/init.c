@@ -210,6 +210,49 @@ static int kernel_poll(struct flextcp_context *ctx, int num,
   return (j == -1 ? -1 : 0);
 }
 
+int rdma_fastpath_poll(struct flextcp_context *ctx,
+        struct flextcp_connection *conn, int num){
+    int i;
+    struct flextcp_pl_arx *arx_q, *arx;
+    uint32_t head;
+    struct flextcp_connection *rx_conn;
+
+    arx_q = (struct flextcp_pl_arx *) ctx->queues[conn->fn_core].rxq_base;
+    head = ctx->queues[conn->fn_core].rxq_head;
+    for (i = 0; i < num;) {
+        arx = &arx_q[head / sizeof(*arx)];
+        if (arx->type == FLEXTCP_PL_ARX_INVALID) {
+            break;
+        } else if (arx->type == FLEXTCP_PL_ARX_RDMAUPDATE) {
+            rx_conn = OPAQUE_PTR(arx->msg.rdmaupdate.opaque);
+            if (arx->msg.rdmaupdate.wq_tail >= rx_conn->wq_tail){
+                rx_conn->wq_len -= (arx->msg.rdmaupdate.wq_tail - rx_conn->wq_tail);
+            }else{
+                rx_conn->wq_len -= (arx->msg.rdmaupdate.wq_tail + rx_conn->wq_size - rx_conn->wq_tail);
+            }
+            rx_conn->wq_tail = arx->msg.rdmaupdate.wq_tail;
+            if (arx->msg.rdmaupdate.cq_head >= rx_conn->cq_tail){
+                rx_conn->cq_len = arx->msg.rdmaupdate.cq_head - rx_conn->cq_tail;
+            }else{
+                rx_conn->cq_len = arx->msg.rdmaupdate.cq_head + rx_conn->wq_size - rx_conn->cq_tail;
+            }
+        } else {
+            fprintf(stderr, "flextcp_context_poll: kout type=%u head=%x\n", arx->type, head);
+        }
+
+        MEM_BARRIER();
+
+        arx->type = 0;
+        /* next entry */
+        head += sizeof(*arx);
+        if (head >= ctx->rxq_len) {
+            head -= ctx->rxq_len;
+        }
+    }
+    ctx->queues[conn->fn_core].rxq_head = head;
+    return 0;
+}
+
 static int fastpath_poll(struct flextcp_context *ctx, int num,
     struct flextcp_event *events, int *used)
 {
@@ -481,7 +524,6 @@ static int fastpath_poll_vec(struct flextcp_context *ctx, int num,
   return 0;
 }
 
-// TODO: Fastpath need not be polled at all!
 int flextcp_context_poll(struct flextcp_context *ctx, int num,
     struct flextcp_event *events)
 {
@@ -507,6 +549,7 @@ int flextcp_context_poll(struct flextcp_context *ctx, int num,
   fastpath_poll_vec(ctx, num - i, events + i, &j);
 
   txq_probe(ctx, num);
+  // TODO: Handle failed rdma bumps
   conns_bump(ctx);
 
   return i + j;
@@ -589,6 +632,13 @@ static inline int event_kappin_conn_opened(
   conn->txb_base = (uint8_t *) flexnic_mem + inev->tx_off;
   conn->txb_len = inev->tx_len;
 
+  conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
+  conn->wq_size = inev->wq_len;
+
+  conn->mr = (uint8_t *) flexnic_mem + inev->mr_off;
+  conn->mr_len = inev->mr_len;
+
+  // TODO: Check if this is required
   /* inject bump if necessary */
   if (conn->rxb_used > 0) {
     conn->seq_rx += conn->rxb_used;
@@ -600,6 +650,7 @@ static inline int event_kappin_conn_opened(
     j++;
   }
 
+  // TODO: Check if this is required
   /* add end of stream notification if necessary */
   if (conn->rx_closed) {
     outev[j].event_type = FLEXTCP_EV_CONN_RXCLOSED;
@@ -662,6 +713,13 @@ static inline int event_kappin_accept_conn(
   conn->txb_base = (uint8_t *) flexnic_mem + inev->tx_off;
   conn->txb_len = inev->tx_len;
 
+  conn->wq_base = (uint8_t *) flexnic_mem + inev->wq_off;
+  conn->wq_size = inev->wq_len;
+
+  conn->mr = (uint8_t *) flexnic_mem + inev->mr_off;
+  conn->mr_len = inev->mr_len;
+
+  // TODO: Check if this is required
   /* inject bump if necessary */
   if (conn->rxb_used > 0) {
     conn->seq_rx += conn->rxb_used;
@@ -673,6 +731,7 @@ static inline int event_kappin_accept_conn(
     j++;
   }
 
+  // TODO: Check if this is required
   /* add end of stream notification if necessary */
   if (conn->rx_closed) {
     outev[j].event_type = FLEXTCP_EV_CONN_RXCLOSED;
@@ -905,6 +964,25 @@ static void txq_probe(struct flextcp_context *ctx, unsigned n)
 
     ctx->queues[q].txq_avail = avail;
   }
+}
+
+int rdma_conn_bump(struct flextcp_context *ctx,
+		struct flextcp_connection *c){
+	struct flextcp_pl_atx *atx;
+    assert(c->status == CONN_OPEN);
+    // TODO: Only call txq_probe when we run out of space
+    txq_probe(ctx, ctx->txq_len);
+    if (flextcp_context_tx_alloc(ctx, &atx, c->fn_core) != 0) {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+		    return -1;
+    }
+    atx->msg.rdmaupdate.wq_head = (c->wq_tail + c->wq_len) % c->wq_size;
+    atx->msg.rdmaupdate.cq_tail = c->cq_tail;
+    atx->msg.rdmaupdate.flow_id = c->flow_id;
+    MEM_BARRIER();
+    atx->type = FLEXTCP_PL_ATX_RDMAUPDATE;
+    flextcp_context_tx_done(ctx, c->fn_core);
+	  return 0;
 }
 
 static void conns_bump(struct flextcp_context *ctx)

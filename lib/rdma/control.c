@@ -7,7 +7,7 @@
 
 #include "internal.h"
 
-struct socket* fdmap[MAX_FD_NUM];
+struct rdma_socket* fdmap[MAX_FD_NUM];
 struct flextcp_context* appctx = NULL;
 
 /**
@@ -80,7 +80,7 @@ int rdma_listen(const struct sockaddr_in* localaddr, int backlog)
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct socket* s = calloc(1, sizeof(struct socket));
+    struct rdma_socket* s = calloc(1, sizeof(struct rdma_socket));
     if (s == NULL)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -108,6 +108,7 @@ int rdma_listen(const struct sockaddr_in* localaddr, int backlog)
     memset(&ev, 0, sizeof(struct flextcp_event));
     while (1)
     {
+	// TODO: Only poll the kernel
         ret = flextcp_context_poll(appctx, 1, &ev);
         if (ret < 0)
         {
@@ -132,22 +133,23 @@ int rdma_listen(const struct sockaddr_in* localaddr, int backlog)
         return -1;
     }
 
-    // 7. Store socket in fdmap
+    // 7. Store rdma_socket in fdmap
     s->type = RDMA_LISTEN_SOCKET;
     fdmap[fd] = s;
 
     return fd;
 }
 
-int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr)
+int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr,
+		void **mr_base, uint32_t *mr_len)
 {
-    // 1. Find listener socket
+    // 1. Find listener rdma_socket
     if (listenfd < 1 || listenfd >= MAX_FD_NUM)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct socket* ls = fdmap[listenfd];
+    struct rdma_socket* ls = fdmap[listenfd];
 
     // 2. Allocate FD and Socket
     int fd = fd_alloc();
@@ -156,7 +158,7 @@ int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr)
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct socket* s = calloc(1, sizeof(struct socket));
+    struct rdma_socket* s = calloc(1, sizeof(struct rdma_socket));
     if (s == NULL)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -177,6 +179,7 @@ int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr)
     memset(&ev, 0, sizeof(struct flextcp_event));
     while (1)
     {
+	// TODO: Only poll the kernel
         ret = flextcp_context_poll(appctx, 1, &ev);
         if (ret < 0)
         {
@@ -205,11 +208,16 @@ int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr)
     s->type = RDMA_CONN_SOCKET;
     fdmap[fd] = s;
 
+    // 7. Update return parameters
+    *mr_base = s->c.mr;
+    *mr_len = s->c.mr_len;
+
     // TODO: Find a way to capture the remote addr
     return fd;
 }
 
-int rdma_connect(const struct sockaddr_in* remoteaddr)
+int rdma_connect(const struct sockaddr_in* remoteaddr, void **mr_base,
+		uint32_t *mr_len)
 {
     // 1. Validate Remoteaddr
     if (remoteaddr == NULL || remoteaddr->sin_family != AF_INET)
@@ -225,7 +233,7 @@ int rdma_connect(const struct sockaddr_in* remoteaddr)
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct socket* s = calloc(1, sizeof(struct socket));
+    struct rdma_socket* s = calloc(1, sizeof(struct rdma_socket));
     if (s == NULL)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -247,6 +255,7 @@ int rdma_connect(const struct sockaddr_in* remoteaddr)
     memset(&ev, 0, sizeof(struct flextcp_event));
     while (1)
     {
+	// TODO: Only poll the kernel
         ret = flextcp_context_poll(appctx, 1, &ev);
         if (ret < 0)
         {
@@ -271,9 +280,13 @@ int rdma_connect(const struct sockaddr_in* remoteaddr)
         return -1;
     }
 
-    // 6. Store socket in fdmap
+    // 6. Store rdma_socket in fdmap
     s->type = RDMA_CONN_SOCKET;
     fdmap[fd] = s;
+
+    // 7. Update return parameters
+    *mr_base = s->c.mr;
+    *mr_len = s->c.mr_len;
 
     return fd;
 }

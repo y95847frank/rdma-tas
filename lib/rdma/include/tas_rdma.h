@@ -11,8 +11,8 @@
  * RDMA operation types.
  */
 enum rdma_op_type_e {
-    RDMA_READ,
-    RDMA_WRITE
+    RDMA_OP_READ,
+    RDMA_OP_WRITE
 };
 
 /**
@@ -76,7 +76,7 @@ int rdma_listen(const struct sockaddr_in* localaddr, int backlog);
  * 
  * @return File Descriptor on SUCCESS. -1 on FAILURE.
  */
-int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr);
+int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr, void **mr_base, uint32_t *mr_len);
 
 /**
  * Connect to a remote RDMA-capable server.
@@ -88,7 +88,7 @@ int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr);
  * 
  * @return File Descriptor on SUCCESS. -1 on FAILURE.
  */
-int rdma_connect(const struct sockaddr_in* remoteaddr);
+int rdma_connect(const struct sockaddr_in* remoteaddr, void **mr_base, uint32_t *mr_len);
 
 /**
  * One-sided communication primitive to read data
@@ -135,16 +135,14 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
 /**
  * Fetch completion event with the status of a completed operation.
  * 
- * NOTE: *Blocking* or *Non-blocking* depending on params
+ * NOTE: *Blocking*
  * 
  * @param fd    File Descriptor obtained on successful accept()/connect()
  * @param compl_evs Reference to RDMA event descriptors.
- * @param num   Number of events read
- * @param timeout Maximum amount of time to block to wait for event completion.
- *                Returns immediately if 0.
- * @return -1 on FAILURE. If successful, number of events copied.
- *          Completion events are copied to *evs*.
+ * @param num   Number of events to read
+ * @return -1 on FAILURE, 0 on SUCCESS
+ *          Completion events are copied to *compl_evs*.
  */
-int rdma_cq_poll(int fd, struct rdma_wqe** compl_evs, uint32_t num, uint32_t timeout);
+int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num);
 
 #endif /* FLEXTCP_RDMA_H_ */
