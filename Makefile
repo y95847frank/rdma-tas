@@ -58,6 +58,8 @@ TESTS= \
 	tests/bench_ll_echo \
 	tests/rdma_client \
 	tests/rdma_server \
+	tests/rdma_multi_server \
+	tests/rdma_multi_client \
 	$(TESTS_AUTO) \
 	$(TESTS_AUTO_FULL)
 
@@ -93,6 +95,8 @@ tests/bench_ll_echo: tests/bench_ll_echo.o lib/libtas.so
 
 tests/rdma_client: tests/rdma_client.o lib/libtas_rdma.so lib/libtas.so
 tests/rdma_server: tests/rdma_server.o lib/libtas_rdma.so lib/libtas.so
+tests/rdma_multi_client: tests/rdma_multi_client.o lib/libtas_rdma.so lib/libtas.so
+tests/rdma_multi_server: tests/rdma_multi_server.o lib/libtas_rdma.so lib/libtas.so
 
 tests/libtas/tas_ll: tests/libtas/tas_ll.o tests/libtas/harness.o \
 	tests/libtas/harness.o tests/testutils.o lib/libtas.so
