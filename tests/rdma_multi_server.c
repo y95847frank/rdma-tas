@@ -7,9 +7,9 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 
-#define NUM_CONNECTIONS     1024
+#define NUM_CONNECTIONS     65535
 #define MESSAGE_SIZE        64
-#define NUM_PENDING_MSGS    32
+#define NUM_PENDING_MSGS    63
 
 int fd[NUM_CONNECTIONS];
 void* mr_base[NUM_CONNECTIONS];
