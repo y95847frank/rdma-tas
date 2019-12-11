@@ -11,15 +11,15 @@
 
 #define NUM_CONNECTIONS     65535
 #define MESSAGE_SIZE        64
-#define NUM_PENDING_MSGS    63
-#define MRSIZE              16*1024
-#define WQSIZE              64
+#define MRSIZE              64*1024
+#define WQSIZE              1024
 
 int fd[NUM_CONNECTIONS];
 void* mr_base[NUM_CONNECTIONS];
 uint32_t mr_len[NUM_CONNECTIONS];
 int count[NUM_CONNECTIONS];
 struct rdma_wqe ev[WQSIZE];
+uint64_t latency[8 * WQSIZE * 30];
 
 static inline uint64_t get_nanos(void)
 {
@@ -28,6 +28,12 @@ static inline uint64_t get_nanos(void)
     return (uint64_t) ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec;
 }
 
+static __inline__ unsigned long long rdtsc(void)
+{
+    unsigned hi, lo;
+    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((unsigned long long) lo)| (((unsigned long long) hi) << 32);
+}
 
 int main(int argc, char* argv[])
 {
@@ -71,16 +77,20 @@ int main(int argc, char* argv[])
         c++;
         f++;
     }
-    count[0] = NUM_PENDING_MSGS;
+    count[0] = pending_msgs;
     for (int i = 1; i < num_conns; i++)
     {
         memcpy(mr_base[i], mr_base[0], mr_len[0]);
-        count[i] = NUM_PENDING_MSGS;
+        count[i] = pending_msgs;
     }
 
     uint64_t start_time = get_nanos();
+    uint64_t iter = 0;
+    uint64_t latency_count = 0;
+    uint64_t total_latency = 0;
     while (1)
     {
+        iter ++;
         for (int i = 0; i < num_conns; i++)
         {
             int ret = rdma_cq_poll(fd[i], ev, WQSIZE);
@@ -97,6 +107,12 @@ int main(int argc, char* argv[])
                     fprintf(stderr, "%s():%d id=%u status=%u\n", __func__, __LINE__, ev[j].id, ev[j].status);
                     return -1;
                 }
+
+                if (ev[j].id % 200 == 0)
+                {
+                    total_latency += (rdtsc() - latency[ev[j].id]);
+                    latency_count++;
+                }
             }
 #endif
             count[i] += ret;
@@ -111,17 +127,26 @@ int main(int argc, char* argv[])
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
                     return -1;
                 }
+
+                if (ret % 200 == 0)
+                {
+                    latency[ret] = rdtsc();
+                }
             }
             count[i] -= j;
         }
 
-        if (compl_msgs % 10000 == 0)
+        if (iter % 50000000 == 0)
         {
             uint64_t cur_time = get_nanos();
             double diff = (cur_time - start_time)/1000000000.;
             double tpt = (compl_msgs*msg_len*8)/(diff * 1024);
-            fprintf(stderr, "Msgs: %lu Bytes: %lu Time: %lf Throughput=%lf Kbps \n", compl_msgs, compl_msgs*msg_len, 
-                diff, tpt);
+            double latency = (total_latency/3000.)/latency_count;
+            fprintf(stderr, "Msgs: %lu Bytes: %lu Time: %lf Throughput=%lf Kbps Latency=%lf us\n", compl_msgs, compl_msgs*msg_len, 
+                diff, tpt, latency);
+            
+            // compl_msgs = 0;
+            // start_time = cur_time;
         }
     }
     return 0;
