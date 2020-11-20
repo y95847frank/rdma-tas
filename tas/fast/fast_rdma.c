@@ -137,7 +137,10 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
                                             sizeof(struct rdma_wqe));
       wqe_pending_rx = wqe->len;
       rx_bump_len = MIN(wqe_pending_rx, rx_bump);
+
+      // Based on read: roff, loff???
       void* mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
+      
       if (wqe->status == RDMA_PENDING)
         fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, mr_ptr);
       else
@@ -164,6 +167,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
         if (rq_head >= rq_len)
           rq_head -= rq_len;
       }
+      //Read bump cq
     }
     else
     {
@@ -192,9 +196,13 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
         {
           if ((type & RDMA_READ) == RDMA_READ)
           {
-            /* Not yet implemented */
-            fprintf(stderr, "%s():%d RDMA_READ Not yet implemented.\n", __func__, __LINE__);
-            abort();
+            // Copy data out of buffer
+            mr_buf = dma_pointer(fs->mr_base + wqe->loff + fs->wqe_tx_seq, wqe_tx_pending_len);
+            fast_rdma_txbuf_copy(fl, tx_len, mr_buf);
+            fs->pending_rq_state = RDMA_RQ_PENDING_PARSE;
+
+            fast_rdmacq_bump(fs, f_beui32(hdr->id), hdr->status);
+            cq_bump = 1;
           }
           else if ((type & RDMA_WRITE) == RDMA_WRITE)
           {
@@ -223,11 +231,14 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
 
           if ((type & RDMA_READ) == RDMA_READ)
           {
-            fprintf(stderr, "%s():%d RDMA_READ Not yet implemented.\n", __func__, __LINE__);
-            abort();
-
+            //fprintf(stderr, "%s():%d RDMA_READ Not yet implemented.\n", __func__, __LINE__);
+            //abort();
+            // Write data to buffer
             wqe->type = (RDMA_OP_READ);
             fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
+            //mr_buf = dma_pointer(fs->mr_base + wqe->loff + fs->wqe_tx_seq, wqe_tx_pending_len);
+            //fast_rdma_txbuf_copy(fl, tx_len, mr_buf);
+
             rq_head += sizeof(struct rdma_wqe);
             if (rq_head >= rq_len)
               rq_head -= rq_len;
