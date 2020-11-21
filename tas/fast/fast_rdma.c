@@ -168,7 +168,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
           rq_head -= rq_len;
 
         if(wqe->type == (RDMA_OP_READ)){
-          fast_rdmacq_bump(fs, f_beui32(wqe->id), wqe->status);
+          fast_rdmacq_bump(fs, wqe->id, wqe->status);
           cq_bump = 1;
         }
       }
