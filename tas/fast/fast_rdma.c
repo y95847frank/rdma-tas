@@ -202,6 +202,8 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
            wqe->status = RDMA_PENDING;
         wqe->roff = 0;
 
+        fprintf(stderr,"wqe_id:%u\n",wqe->id);
+        
         uint8_t type = hdr->type;
         if ((type & RDMA_RESPONSE) == RDMA_RESPONSE)
         {
@@ -397,6 +399,48 @@ static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
     hdr.id = t_beui32(wqe->id);
     hdr.flags = t_beui16(0);
 
+    fprintf(stderr,"hdr_id:%u\n",wqe->id);
+    // DEBUG
+    uint8_t type = hdr.type;
+    if ((type & RDMA_RESPONSE) == RDMA_RESPONSE)
+      {
+        if ((type & RDMA_READ) == RDMA_READ)
+        {
+            fprintf(stderr,"READ RESPONSE\n");
+        }
+        else if ((type & RDMA_WRITE) == RDMA_WRITE)
+        {
+             fprintf(stderr,"WRITE RESPONSE\n");
+        }
+        else
+        {
+            fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
+            abort();
+        }
+      }
+      else if ((type & RDMA_REQUEST) == RDMA_REQUEST)
+      {
+          if ((type & RDMA_READ) == RDMA_READ)
+          {
+             fprintf(stderr,"READ REQUEST\n");
+          }
+          else if ((type & RDMA_WRITE) == RDMA_WRITE)
+          { 
+             fprintf(stderr,"WRITE REQUEST\n");
+          }
+          else
+          {
+            fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
+            abort();
+          } 
+      }
+      else
+      {
+          fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
+          abort();
+      }
+      //DEBUG
+
     fast_rdma_txbuf_copy(fl, sizeof(struct rdma_hdr), &hdr);
 
     free_txbuf_len -= sizeof(struct rdma_hdr);
@@ -417,7 +461,7 @@ static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
     }
     else
     {
-      if (wqe->status == RDMA_SUCCESS && wqe->type == RDMA_OP_READ)
+      if (wqe->type == RDMA_OP_READ)
       {
         wqe->status = RDMA_TX_PENDING;
       }
