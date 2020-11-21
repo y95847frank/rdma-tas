@@ -118,12 +118,15 @@ RDMA_BUMP_ERROR:
 int fast_rdmarq_bump(struct dataplane_context* ctx,
     struct flextcp_pl_flowst* fs, uint32_t prev_rx_head, uint32_t rx_bump)
 {
-  uint32_t rq_head, rq_len, rx_head, rx_len, new_rx_head;
+  uint32_t rq_head, rq_len, rx_head, rx_len, wq_head, wq_len, new_rx_head;
   uint8_t cq_bump = 0;
   rq_head = fs->rq_head;
   rq_len = fs->wq_len;
   rx_head = prev_rx_head;
   rx_len = fs->rx_len;
+  wq_head = fs->wq_head;
+  wq_len = fs->wq_len;
+
   new_rx_head = prev_rx_head + rx_bump;
   if (new_rx_head >= rx_len)
     new_rx_head -= rx_len;
@@ -189,16 +192,15 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
       if (wqe_pending_rx == 0)
       {
         struct rdma_hdr* hdr = (struct rdma_hdr*) fs->pending_rq_buf;
-        struct rdma_wqe* wqe = dma_pointer(fs->rq_base + rq_head,
-                                            sizeof(struct rdma_wqe));
-
+        
+        struct rdma_wqe* wqe = dma_pointer(fs->rq_base + rq_head, sizeof(struct rdma_wqe));
         wqe->id = f_beui32(hdr->id);
         wqe->len = f_beui32(hdr->length);
         wqe->loff = f_beui32(hdr->offset);
         if (wqe->loff + wqe->len > fs->mr_len)
-          wqe->status = RDMA_OUT_OF_BOUNDS;
+            wqe->status = RDMA_OUT_OF_BOUNDS;
         else
-          wqe->status = RDMA_PENDING;
+           wqe->status = RDMA_PENDING;
         wqe->roff = 0;
 
         uint8_t type = hdr->type;
@@ -212,7 +214,6 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
           {
             /* No more data to be received */
             fs->pending_rq_state = RDMA_RQ_PENDING_PARSE;
-
             fast_rdmacq_bump(fs, f_beui32(hdr->id), hdr->status);
             cq_bump = 1;
           }
@@ -224,23 +225,36 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
         }
         else if ((type & RDMA_REQUEST) == RDMA_REQUEST)
         {
+          
           if ((type & RDMA_READ) == RDMA_READ)
           {
-            fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
+            struct rdma_wqe* wq_wqe  = dma_pointer(fs->wq_base + wq_head, sizeof(struct rdma_wqe));
+            wq_wqe->id = f_beui32(hdr->id);
+            wq_wqe->len = f_beui32(hdr->length);
+            wq_wqe->loff = f_beui32(hdr->offset);
+            if (wq_wqe->loff + wq_wqe->len > fs->mr_len)
+                wq_wqe->status = RDMA_OUT_OF_BOUNDS;
+            else
+                wq_wqe->status = RDMA_PENDING;
+            wq_wqe->roff = 0;
+            wq_wqe->type = (RDMA_OP_WRITE);
 
-            rq_head += sizeof(struct rdma_wqe);
-            if (rq_head >= rq_len)
-              rq_head -= rq_len;
+            wq_head += sizeof(struct rdma_wqe);
+            if(wq_head >= wq_len)
+                wq_head -= wq_len;
+
+            fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
+            
           }
           else if ((type & RDMA_WRITE) == RDMA_WRITE)
-          {
+          { 
             wqe->type = (RDMA_OP_WRITE);
           }
           else
           {
             fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
             abort();
-          }
+          } 
         }
         else
         {
