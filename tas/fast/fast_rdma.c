@@ -115,14 +115,15 @@ RDMA_BUMP_ERROR:
   return -1;
 }
 
+// when rx_bump != 0, receive buffer is not empty
 int fast_rdmarq_bump(struct dataplane_context* ctx,
     struct flextcp_pl_flowst* fs, uint32_t prev_rx_head, uint32_t rx_bump)
 {
   uint32_t rq_head, rq_len, rx_head, rx_len, new_rx_head;
   uint8_t cq_bump = 0;
-  rq_head = fs->rq_head;
+  rq_head = fs->rq_head; // offset of the latest wqe in request queue
   rq_len = fs->wq_len;
-  rx_head = prev_rx_head;
+  rx_head = prev_rx_head; // offset of the latest unbumped request/data in the receive buffer?
   rx_len = fs->rx_len;
   new_rx_head = prev_rx_head + rx_bump;
   if (new_rx_head >= rx_len)
@@ -131,14 +132,27 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
   uint32_t wqe_pending_rx, rx_bump_len;
   while (rx_head != new_rx_head && rx_bump > 0)
   {
+    /* fs->pending_rq_state is from 0 to 16
+       if 16, we have no partially received request, go to `if` to process data
+       if < 16, we first go to `else` to read remaining partially received request
+    */
     if (fs->pending_rq_state == RDMA_RQ_PENDING_DATA)
     {
+      // wqe point to the latest unacked request in rq
       struct rdma_wqe* wqe = dma_pointer(fs->rq_base + rq_head,
                                             sizeof(struct rdma_wqe));
-      wqe_pending_rx = wqe->len;
+      
+      /* rx_bump: size of data newly received, might be more or less than the data length specified by the latest wqe. 
+         if more, read the entire data and then go to `else`. if less, read partial data and exit loop.
+        */
+      wqe_pending_rx = wqe->len; // length of data
       rx_bump_len = MIN(wqe_pending_rx, rx_bump);
+
+      // mr_ptr point to RDMA local memory addr
       void* mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
+
       if (wqe->status == RDMA_PENDING)
+        //copy the received data from the receive buffer to memory
         fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, mr_ptr);
       else
       {
@@ -146,29 +160,48 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
         fs->rx_avail += rx_bump_len;
       }
 
-      rx_head += rx_bump_len;
+      rx_head += rx_bump_len; // move rx_head one bump ahead
+
       if (rx_head >= rx_len)
-        rx_head -= rx_len;
+        rx_head -= rx_len; // receive buffer is circular
+
+      // update remaining rx_bump and wqe
       rx_bump -= rx_bump_len;
       wqe_pending_rx -= rx_bump_len;
       wqe->len -= rx_bump_len;
       wqe->loff += rx_bump_len;
 
+      // if this wqe's data is completely copied to memory
       if (wqe_pending_rx == 0)
       {
         if (wqe->status == RDMA_PENDING)
           wqe->status = RDMA_SUCCESS;
-
+        
+        // start to parse request again
         fs->pending_rq_state = RDMA_RQ_PENDING_PARSE;
+
+        // move rq_head one wqe ahead
         rq_head += sizeof(struct rdma_wqe);
         if (rq_head >= rq_len)
-          rq_head -= rq_len;
+          rq_head -= rq_len; // request queue is circular
       }
     }
     else
     {
-      wqe_pending_rx = 16 - fs->pending_rq_state;
-      rx_bump_len = MIN(wqe_pending_rx, rx_bump);
+      /* 
+       request is followed by data, `else` only parses the request
+       request buffer |++++++++++++++++|*************|
+                      0             rq_state         16
+       RDMA_RQ_PENDING_PARSE = 0, RDMA_RQ_PENDING_DATA = 16 
+       one request is 16 bytes
+       fs->pending_rq_buf: current request buffer that once filled will be updated to the latest wqe in rq
+      */
+      wqe_pending_rx = 16 - fs->pending_rq_state; // the length of partial request that is not dma'd to fs->pending_rq_buf
+
+      // if unbumped in receive buffer < undma'd partial request
+      rx_bump_len = MIN(wqe_pending_rx, rx_bump); 
+
+      // dma_read from receive buffer to partially received request buffer
       fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, fs->pending_rq_buf + fs->pending_rq_state);
 
       rx_head += rx_bump_len;
@@ -178,9 +211,13 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
       wqe_pending_rx -= rx_bump_len;
       fs->pending_rq_state += rx_bump_len;
 
+      // request is completely read into fs->pending_rq_buf
       if (wqe_pending_rx == 0)
       {
-        struct rdma_hdr* hdr = (struct rdma_hdr*) fs->pending_rq_buf;
+        
+        struct rdma_hdr* hdr = (struct rdma_hdr*) fs->pending_rq_buf;// hdr: pointer to the rdma header
+        
+        // wqe point to the latest unacked request in rq
         struct rdma_wqe* wqe = dma_pointer(fs->rq_base + rq_head,
                                             sizeof(struct rdma_wqe));
 
@@ -212,6 +249,11 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
         }
         else if ((type & RDMA_REQUEST) == RDMA_REQUEST)
         {
+          // client request server
+          // server memory -> server tx buf 
+          // server response client
+          // -> client rx buf -> client mem
+          // fill in each 
           wqe->id = f_beui32(hdr->id);
           wqe->len = f_beui32(hdr->length);
           wqe->loff = f_beui32(hdr->offset);
