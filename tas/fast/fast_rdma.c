@@ -118,7 +118,7 @@ RDMA_BUMP_ERROR:
 int fast_rdmarq_bump(struct dataplane_context* ctx,
     struct flextcp_pl_flowst* fs, uint32_t prev_rx_head, uint32_t rx_bump)
 {
-  uint32_t rq_head, rq_len, rx_head, rx_len, new_rx_head;
+  uint32_t rq_head, rq_len, rx_head, rx_len, wq_head, wq_len, new_rx_head;
   uint8_t cq_bump = 0;
   rq_head = fs->rq_head;
   rq_len = fs->wq_len;
@@ -223,7 +223,6 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
         }
         else if ((type & RDMA_REQUEST) == RDMA_REQUEST)
         {
-          
           if ((type & RDMA_READ) == RDMA_READ)
           {
             wqe->type = (RDMA_OP_READ);
@@ -233,7 +232,6 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
                rq_head -= rq_len;
 
             fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
-            
           }
           else if ((type & RDMA_WRITE) == RDMA_WRITE)
           { 
