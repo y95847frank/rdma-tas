@@ -223,7 +223,6 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
         }
         else if ((type & RDMA_REQUEST) == RDMA_REQUEST)
         {
-          
           if ((type & RDMA_READ) == RDMA_READ)
           {
             wqe->type = (RDMA_OP_READ);
@@ -233,7 +232,6 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
                rq_head -= rq_len;
 
             fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
-            
           }
           else if ((type & RDMA_WRITE) == RDMA_WRITE)
           { 
