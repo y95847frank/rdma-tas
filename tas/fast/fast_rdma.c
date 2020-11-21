@@ -124,6 +124,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
   rq_len = fs->wq_len;
   rx_head = prev_rx_head;
   rx_len = fs->rx_len;
+
   new_rx_head = prev_rx_head + rx_bump;
   if (new_rx_head >= rx_len)
     new_rx_head -= rx_len;
@@ -189,16 +190,15 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
       if (wqe_pending_rx == 0)
       {
         struct rdma_hdr* hdr = (struct rdma_hdr*) fs->pending_rq_buf;
-        struct rdma_wqe* wqe = dma_pointer(fs->rq_base + rq_head,
-                                            sizeof(struct rdma_wqe));
-
+        
+        struct rdma_wqe* wqe = dma_pointer(fs->rq_base + rq_head, sizeof(struct rdma_wqe));
         wqe->id = f_beui32(hdr->id);
         wqe->len = f_beui32(hdr->length);
         wqe->loff = f_beui32(hdr->offset);
         if (wqe->loff + wqe->len > fs->mr_len)
-          wqe->status = RDMA_OUT_OF_BOUNDS;
+            wqe->status = RDMA_OUT_OF_BOUNDS;
         else
-          wqe->status = RDMA_PENDING;
+           wqe->status = RDMA_PENDING;
         wqe->roff = 0;
 
         uint8_t type = hdr->type;
@@ -212,7 +212,6 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
           {
             /* No more data to be received */
             fs->pending_rq_state = RDMA_RQ_PENDING_PARSE;
-
             fast_rdmacq_bump(fs, f_beui32(hdr->id), hdr->status);
             cq_bump = 1;
           }
@@ -224,23 +223,27 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
         }
         else if ((type & RDMA_REQUEST) == RDMA_REQUEST)
         {
+          
           if ((type & RDMA_READ) == RDMA_READ)
           {
-            fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
+            wqe->type = (RDMA_OP_READ);
 
             rq_head += sizeof(struct rdma_wqe);
             if (rq_head >= rq_len)
-              rq_head -= rq_len;
+               rq_head -= rq_len;
+
+            fs->pending_rq_state = RDMA_RQ_PENDING_PARSE; /* No more data to be received */
+            
           }
           else if ((type & RDMA_WRITE) == RDMA_WRITE)
-          {
+          { 
             wqe->type = (RDMA_OP_WRITE);
           }
           else
           {
             fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
             abort();
-          }
+          } 
         }
         else
         {
