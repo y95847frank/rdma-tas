@@ -539,12 +539,12 @@ static int config_defaults(struct configuration *c, char *progname)
   c->arp_to_max = 10000000;
   c->tcp_rtt_init = 50;
   c->tcp_link_bw = 10;
-  c->tcp_rxbuf_len = 8192;
-  c->tcp_txbuf_len = 8192;
+  c->tcp_rxbuf_len = 819200;
+  c->tcp_txbuf_len = 819200;
   c->tcp_handshake_to = 10000;
   c->tcp_handshake_retries = 10;
   c->rdma_mr_len = 64 * 1024;
-  c->rdma_wq_len = 20 * 64;
+  c->rdma_wq_len = 20 * 512;
   c->cc_algorithm = CONFIG_CC_DCTCP_RATE;
   c->cc_control_granularity = 50;
   c->cc_control_interval = 2;
