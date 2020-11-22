@@ -382,7 +382,13 @@ static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
   struct rdma_hdr hdr;
   void* mr_buf;
 
-  tx_seq = fl->wqe_tx_seq;
+  if(is_request){
+     tx_seq = fl->wqe_tx_seq;
+  }
+  else{
+     tx_seq = fl->rqe_tx_seq;
+  }
+  
   free_txbuf_len = fl->tx_len - fl->tx_avail - fl->tx_sent;
 
   if (wqe->status == RDMA_TX_PENDING)
