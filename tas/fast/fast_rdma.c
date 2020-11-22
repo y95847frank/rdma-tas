@@ -169,10 +169,11 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
           fast_rdmacq_bump(fs, wqe->id, wqe->status);
           cq_bump = 1;
         }
-
+        if(wqe->type == (RDMA_OP_WRITE)){
         rq_head += sizeof(struct rdma_wqe);
         if (rq_head >= rq_len)
           rq_head -= rq_len;
+        }
       }
     }
     else
