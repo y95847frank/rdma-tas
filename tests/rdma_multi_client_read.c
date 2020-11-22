@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "%s():%d\n", __func__, __LINE__);
                 return -1;
             }
-            /*
+        
             #ifndef NOVERIFY
             for (int j = 0; j < ret; j++)
             {
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
                 }
             }
             #endif
-            */
+            
             count[i] += ret;
             compl_msgs += ret;
 
