@@ -79,14 +79,14 @@ int main(int argc, char* argv[])
     fprintf(stderr, "Pinging %s with %d of data:\n", rip, msg_len);
     
     char* c = mr_base[0];
-    char f = 0;
+    char f = 'm';
     for (int i = 0; i < mr_len[0]; i++)
     {
         *c = f;
         c++;
         f++;
     }
-    printf("mem: %s\n", (char*)mr_base[0]);
+    printf("mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[0]);
     count[0] = pending_msgs;
     for (int i = 1; i < num_conns; i++)
     {
