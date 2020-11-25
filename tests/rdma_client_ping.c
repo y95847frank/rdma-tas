@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
         *c = f;
         c++;
     }
-    printf("mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[0]);
+    printf("mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)mr_base[0]);
 
     count[0] = pending_msgs;
     for (int i = 1; i < num_conns; i++)
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
                 else {
                     printf("Finished Write!\n");
                 }
-                printf("Current mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[i]);
+                printf("Current mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)mr_base[i]);
                 stopCount += 1;
                 if (stopCount > 5) {
                     return -1;
