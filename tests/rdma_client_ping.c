@@ -147,9 +147,10 @@ int main(int argc, char* argv[])
             if (j > 0) {
                 write_flag = false;
                 printf("Write %d msg to server: %.*s\n", j, msg_len*j, (char*)mr_base[i]);
+                count[i] -= j;
             }
             //printf("End count: %d\n", count[i]-j);
-            count[i] -= j;
+            
             
             for (j = 0; j < count[i] && !write_flag; j++)
             {
@@ -165,11 +166,12 @@ int main(int argc, char* argv[])
                     latency[ret] = rdtsc();
                 }
             }
-            count[i] -= j;
+            
             if (j > 0) {
                 write_flag = true;
                 printf("Read %d msg from server: %.*s\n\n", j, msg_len*j, (char*)mr_base[i]+read_base);
                 printf("Current mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[i]);
+                count[i] -= j;
             }
         }
 
