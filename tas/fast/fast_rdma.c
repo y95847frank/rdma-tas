@@ -144,7 +144,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
       if(wqe->type == (RDMA_OP_READ)){
         mr_ptr = dma_pointer(fs->mr_base + wqe->roff, rx_bump_len);
       }
-      else if (wqe->type == (RDMA_OP_WRITE)){
+      else {
         mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
       }
 
