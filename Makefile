@@ -61,6 +61,8 @@ TESTS= \
 	tests/rdma_multi_server \
 	tests/rdma_multi_client \
 	tests/rdma_multi_client_read \
+	tests/rdma_client_ping \
+	tests/rdma_server_pong \
 	$(TESTS_AUTO) \
 	$(TESTS_AUTO_FULL)
 
