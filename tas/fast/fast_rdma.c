@@ -140,7 +140,12 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
       rx_bump_len = MIN(wqe_pending_rx, rx_bump);
 
       // Based on read: roff, loff???
-      void* mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
+      if(wqe->type == (RDMA_OP_READ)){
+        void* mr_ptr = dma_pointer(fs->mr_base + wqe->roff, rx_bump_len);
+      }
+      else if (wqe->type == (RDMA_OP_WRITE)){
+        void* mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
+      }
 
       if (wqe->status == RDMA_PENDING)
         fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, mr_ptr);

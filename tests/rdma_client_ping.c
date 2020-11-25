@@ -146,14 +146,14 @@ int main(int argc, char* argv[])
             }
             if (j > 0) {
                 write_flag = false;
-                printf("Write msg to server: %.*s\n", msg_len*j, (char*)mr_base[i]);
+                printf("Write %d msg to server: %.*s\n", j, msg_len*j, (char*)mr_base[i]);
             }
             //printf("End count: %d\n", count[i]-j);
             count[i] -= j;
             
             for (j = 0; j < count[i] && !write_flag; j++)
             {
-                int ret = rdma_read(fd[i], msg_len, 0+msg_len*j, read_base+msg_len*j);
+                int ret = rdma_read(fd[i], msg_len, read_base+msg_len*j, 0+msg_len*j);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
             count[i] -= j;
             if (j > 0) {
                 write_flag = true;
-                printf("Read msg from server: %.*s\n\n", msg_len*j, (char*)mr_base[i]+read_base);
+                printf("Read %d msg from server: %.*s\n\n", j, msg_len*j, (char*)mr_base[i]+read_base);
                 printf("Current mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[i]);
             }
         }
