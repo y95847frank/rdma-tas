@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     {
         memcpy(mr_base[i], mr_base[0], mr_len[0]);
         count[i] = pending_msgs;
-        fprintf(stderr, "mem: %s\n", mr_base[i]);
+        fprintf(stderr, "mem: %s\n", (char*)mr_base[i]);
     }
     getchar();
 
@@ -95,6 +95,7 @@ int main(int argc, char* argv[])
     getchar();
 
     fprintf(stderr, "Pinging %s with %d of data:\n", rip, msg_len);
+    /*
     char* c = mr_base[0];
     char f = 0;
     for (int i = 0; i < mr_len[0]; i++)
@@ -109,6 +110,7 @@ int main(int argc, char* argv[])
         memcpy(mr_base[i], mr_base[0], mr_len[0]);
         count[i] = pending_msgs;
     }
+    */
 
     uint64_t start_time = get_nanos();
     uint64_t iter = 0;
