@@ -164,7 +164,8 @@ int main(int argc, char* argv[])
             count[i] -= j;
             if (j > 0) {
                 write_flag = true;
-                printf("Read msg from server: %.*s\n", msg_len*j, (char*)mr_base[i]+read_base);
+                printf("Read msg from server: %.*s\n\n", msg_len*j, (char*)mr_base[i]+read_base);
+                printf("Current mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[i]);
             }
         }
 
