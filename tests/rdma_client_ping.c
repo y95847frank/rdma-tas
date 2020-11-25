@@ -105,27 +105,29 @@ int main(int argc, char* argv[])
     uint64_t iter = 0;
     uint64_t latency_count = 0;
     uint64_t total_latency = 0;
+    bool write_flag = true;
+    int read_base = msg_len * count[0];
     while (1)
     {
         iter ++;
         for (int i = 0; i < num_conns; i++)
         {
-            printf("Start count: %d\n", count[i]);
+            //printf("Start count: %d\n", count[i]);
             int ret = rdma_cq_poll(fd[i], ev, WQSIZE);
             if (ret < 0)
             {
                 fprintf(stderr, "%s():%d\n", __func__, __LINE__);
                 return -1;
             }
-            printf("ret: %d, Mid count: %d\n", ret, ret+count[i]);
+            //printf("ret: %d, Mid count: %d\n", ret, ret+count[i]);
 
             count[i] += ret;
             compl_msgs += ret;
 
             int j;
-            for (j = 0; j < count[i]; j++)
+            for (j = 0; j < count[i] && write_flag; j++)
             {
-                int ret = rdma_write(fd[i], msg_len, 0, 0);
+                int ret = rdma_write(fd[i], msg_len, 0+msg_len*j, 0+msg_len*j);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
@@ -137,23 +139,16 @@ int main(int argc, char* argv[])
                     latency[ret] = rdtsc();
                 }
             }
-            printf("End count: %d\n", count[i]-j);
-            count[i] -= j;
-            /*
-            ret = rdma_cq_poll(fd[i], ev, WQSIZE);
-            if (ret < 0)
-            {
-                fprintf(stderr, "%s():%d\n", __func__, __LINE__);
-                return -1;
+            if (j > 0) {
+                write_flag = false;
+                printf("Write msg to server: %.*s\n", msg_len*j, mr_base[i]);
             }
-
-            count[i] += ret;
-            compl_msgs += ret;
-
-            j = 0;
-            for (j = 0; j < count[i]; j++)
+            //printf("End count: %d\n", count[i]-j);
+            count[i] -= j;
+            
+            for (j = 0; j < count[i] && !write_flag; j++)
             {
-                int ret = rdma_read(fd[i], msg_len, 0+msg_len, 0);
+                int ret = rdma_read(fd[i], msg_len, read_base+msg_len*j, 0+msg_len*j);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
@@ -166,7 +161,10 @@ int main(int argc, char* argv[])
                 }
             }
             count[i] -= j;
-            */
+            if (j > 0) {
+                write_flag = true;
+                printf("Read msg from server: %.*s\n", msg_len*j, mr_base[i]+read_base);
+            }
         }
 
         if (iter % 50000000 == 0)
