@@ -84,8 +84,6 @@ int main(int argc, char* argv[])
     int read_base = msg_len * pending_msgs;
     for (int i = 0; i < mr_len[0]; i++)
     {
-        *c = f;
-        c++;
         if(i >= read_base) {
             f = '-';
         }
@@ -95,6 +93,8 @@ int main(int argc, char* argv[])
                 f = 'a';
             }
         }
+        *c = f;
+        c++;
     }
     printf("mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[0]);
 
