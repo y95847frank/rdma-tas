@@ -58,11 +58,13 @@ int main(int argc, char* argv[])
         f++;
     }
     count[0] = pending_msgs;
+    printf("Testing!!!\n");
     for (int i = 1; i < num_conns; i++)
     {
         memcpy(mr_base[i], mr_base[0], mr_len[0]);
         count[i] = pending_msgs;
         fprintf(stderr, "mem: %s\n", (char*)mr_base[i]);
+        printf("mem: %s\n", (char*)mr_base[i]);
     }
     getchar();
 
