@@ -111,6 +111,7 @@ int main(int argc, char* argv[])
     uint64_t latency_count = 0;
     uint64_t total_latency = 0;
     bool write_flag = true;
+    int stopCount = 0;
     
     while (1)
     {
@@ -132,6 +133,10 @@ int main(int argc, char* argv[])
                     printf("Finished Write!\n");
                 }
                 printf("Current mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[i]);
+                stopCount += 1;
+                if (stopCount > 5) {
+                    return -1;
+                }
             }
             //printf("ret: %d, Mid count: %d\n", ret, ret+count[i]);
 
