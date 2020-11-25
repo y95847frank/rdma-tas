@@ -49,26 +49,6 @@ int main(int argc, char* argv[])
     assert(msg_len < MRSIZE);
     assert(pending_msgs < WQSIZE);
 
-    char* c = mr_base[0];
-    char f = 'a';
-    for (int i = 0; i < mr_len[0]; i++)
-    {
-        *c = f;
-        c++;
-        f++;
-    }
-    count[0] = pending_msgs;
-    printf("Testing!!!\n");
-    for (int i = 1; i < num_conns; i++)
-    {
-        memcpy(mr_base[i], mr_base[0], mr_len[0]);
-        count[i] = pending_msgs;
-        fprintf(stderr, "mem: %s\n", (char*)mr_base[i]);
-        printf("mem: %s\n", (char*)mr_base[i]);
-    }
-    getchar();
-
-
     rdma_init();
     /*
     //
@@ -97,7 +77,7 @@ int main(int argc, char* argv[])
     getchar();
 
     fprintf(stderr, "Pinging %s with %d of data:\n", rip, msg_len);
-    /*
+    
     char* c = mr_base[0];
     char f = 0;
     for (int i = 0; i < mr_len[0]; i++)
@@ -111,8 +91,9 @@ int main(int argc, char* argv[])
     {
         memcpy(mr_base[i], mr_base[0], mr_len[0]);
         count[i] = pending_msgs;
+        printf("mem: %s\n", (char*)mr_base[i]);
     }
-    */
+    
 
     uint64_t start_time = get_nanos();
     uint64_t iter = 0;
