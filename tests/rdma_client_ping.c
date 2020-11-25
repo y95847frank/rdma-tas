@@ -49,6 +49,24 @@ int main(int argc, char* argv[])
     assert(msg_len < MRSIZE);
     assert(pending_msgs < WQSIZE);
 
+    char* c = mr_base[0];
+    char f = 'a';
+    for (int i = 0; i < mr_len[0]; i++)
+    {
+        *c = f;
+        c++;
+        f++;
+    }
+    count[0] = pending_msgs;
+    for (int i = 1; i < num_conns; i++)
+    {
+        memcpy(mr_base[i], mr_base[0], mr_len[0]);
+        count[i] = pending_msgs;
+        fprintf(stderr, "mem: %s\n", mr_base[i]);
+    }
+    getchar();
+
+
     rdma_init();
     /*
     //
