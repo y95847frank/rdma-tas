@@ -124,12 +124,21 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "%s():%d\n", __func__, __LINE__);
                 return -1;
             }
+            else if (ret > 0) {
+                if (write_flag) {
+                    printf("Finished Read!\n");
+                }
+                else {
+                    printf("Finished Write!\n");
+                }
+                printf("Current mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[i]);
+            }
             //printf("ret: %d, Mid count: %d\n", ret, ret+count[i]);
 
             count[i] += ret;
             compl_msgs += ret;
 
-            int j;
+            int j = 0;
             for (j = 0; j < count[i] && write_flag; j++)
             {
                 int ret = rdma_write(fd[i], msg_len, 0+msg_len*j, 0+msg_len*j);
@@ -146,15 +155,15 @@ int main(int argc, char* argv[])
             }
             if (j > 0) {
                 write_flag = false;
-                printf("Write %d msg to server: %.*s\n", j, msg_len*j, (char*)mr_base[i]);
+                printf("Start writing %d msg to server. Msg should be like: %.*s\n", j, msg_len*j, (char*)mr_base[i]);
                 count[i] -= j;
             }
             //printf("End count: %d\n", count[i]-j);
             
-            
-            for (j = 0; j < count[i] && !write_flag; j++)
+            int k = 0;
+            for (k = 0; k < count[i] && !write_flag; k++)
             {
-                int ret = rdma_read(fd[i], msg_len, read_base+msg_len*j, 0+msg_len*j);
+                int ret = rdma_read(fd[i], msg_len, read_base+msg_len*k+2, 0+msg_len*k);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
@@ -167,11 +176,10 @@ int main(int argc, char* argv[])
                 }
             }
             
-            if (j > 0) {
+            if (k > 0) {
                 write_flag = true;
-                printf("Read %d msg from server: %.*s\n\n", j, msg_len*j, (char*)mr_base[i]+read_base);
-                printf("Current mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[i]);
-                count[i] -= j;
+                printf("Read %d msg from server. Msg should be like: %.*s\n\n", k, msg_len*k, (char*)mr_base[i]);
+                count[i] -= k;
             }
         }
 
