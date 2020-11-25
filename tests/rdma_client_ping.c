@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     remoteaddr.sin_family = AF_INET;
     remoteaddr.sin_addr.s_addr = inet_addr(rip);
     remoteaddr.sin_port = htons(rport);
-
+    
     for (int i = 0; i < num_conns; i++)
     {
         fd[i] = rdma_connect(&remoteaddr, &mr_base[i], &mr_len[i]);
@@ -81,11 +81,15 @@ int main(int argc, char* argv[])
     
     char* c = mr_base[0];
     char f = 'a';
+    int read_base = msg_len * pending_msgs;
     for (int i = 0; i < mr_len[0]; i++)
     {
         *c = f;
         c++;
-        if(i % msg_len == 0 && i > 0) {
+        if(i >= read_base) {
+            f = '-';
+        }
+        else if(i % msg_len == 0 && i > 0) {
             f++;
             if(f > 'z') {
                 f = 'a';
@@ -107,7 +111,7 @@ int main(int argc, char* argv[])
     uint64_t latency_count = 0;
     uint64_t total_latency = 0;
     bool write_flag = true;
-    int read_base = msg_len * count[0];
+    
     while (1)
     {
         iter ++;
