@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+#include <stdbool.h>
 
 #define NUM_CONNECTIONS     65535
 #define MESSAGE_SIZE        64
@@ -141,7 +142,7 @@ int main(int argc, char* argv[])
             }
             if (j > 0) {
                 write_flag = false;
-                printf("Write msg to server: %.*s\n", msg_len*j, mr_base[i]);
+                printf("Write msg to server: %.*s\n", msg_len*j, (char*)mr_base[i]);
             }
             //printf("End count: %d\n", count[i]-j);
             count[i] -= j;
@@ -163,7 +164,7 @@ int main(int argc, char* argv[])
             count[i] -= j;
             if (j > 0) {
                 write_flag = true;
-                printf("Read msg from server: %.*s\n", msg_len*j, mr_base[i]+read_base);
+                printf("Read msg from server: %.*s\n", msg_len*j, (char*)mr_base[i]+read_base);
             }
         }
 
