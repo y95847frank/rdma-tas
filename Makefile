@@ -101,6 +101,8 @@ tests/rdma_server: tests/rdma_server.o lib/libtas_rdma.so lib/libtas.so
 tests/rdma_multi_client: tests/rdma_multi_client.o lib/libtas_rdma.so lib/libtas.so
 tests/rdma_multi_server: tests/rdma_multi_server.o lib/libtas_rdma.so lib/libtas.so
 tests/rdma_multi_client_read: tests/rdma_multi_client_read.o lib/libtas_rdma.so lib/libtas.so
+tests/rdma_client_ping: tests/rdma_client_ping.o lib/libtas_rdma.so lib/libtas.so
+tests/rdma_server_pong: tests/rdma_server_pong.o lib/libtas_rdma.so lib/libtas.so
 
 tests/libtas/tas_ll: tests/libtas/tas_ll.o tests/libtas/harness.o \
 	tests/libtas/harness.o tests/testutils.o lib/libtas.so
