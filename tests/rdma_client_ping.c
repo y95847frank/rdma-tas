@@ -52,9 +52,8 @@ int main(int argc, char* argv[])
 
     rdma_init();
     /*
-    //
+    TODO:
     rdma_create_id();
-    //rdma_create_qp();
     rdma_reg_mem();
     */
 
@@ -146,6 +145,10 @@ int main(int argc, char* argv[])
             int j = 0;
             for (j = 0; j < count[i] && write_flag; j++)
             {
+                /*
+                    TODO:
+                    rdma_reg_write();
+                */
                 int ret = rdma_write(fd[i], msg_len, 0+msg_len*j, 0+msg_len*j);
                 if (ret < 0)
                 {
@@ -168,6 +171,10 @@ int main(int argc, char* argv[])
             int k = 0;
             for (k = 0; k < count[i] && !write_flag; k++)
             {
+                /*
+                    TODO:
+                    rdma_reg_read();
+                */
                 int ret = rdma_read(fd[i], msg_len, 2*read_base+msg_len*k, 0+msg_len*k);
                 if (ret < 0)
                 {

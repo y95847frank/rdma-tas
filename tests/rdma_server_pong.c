@@ -27,9 +27,8 @@ int main(int argc, char* argv[])
 
     rdma_init();
     /*
-    //
+    TODO:
     rdma_create_id();
-    //rdma_create_qp();
     rdma_reg_mem();
     */
 
