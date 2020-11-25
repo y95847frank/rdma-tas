@@ -25,10 +25,13 @@ int main(int argc, char* argv[])
     assert(num_connections < NUM_CONNECTIONS);
     fprintf(stderr, "Params: ip=%s port=%d conns=%d\n", ip, port, num_connections);
 
-    //rdma_init();
+    rdma_init();
+    /*
+    //
     rdma_create_id();
     //rdma_create_qp();
     rdma_reg_mem();
+    */
 
     struct sockaddr_in localaddr, remoteaddr;
     localaddr.sin_family = AF_INET;
