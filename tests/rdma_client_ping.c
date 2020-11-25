@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
             
             for (j = 0; j < count[i] && !write_flag; j++)
             {
-                int ret = rdma_read(fd[i], msg_len, read_base+msg_len*j, 0+msg_len*j);
+                int ret = rdma_read(fd[i], msg_len, 0+msg_len*j, read_base+msg_len*j);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
