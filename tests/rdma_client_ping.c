@@ -79,14 +79,20 @@ int main(int argc, char* argv[])
     fprintf(stderr, "Pinging %s with %d of data:\n", rip, msg_len);
     
     char* c = mr_base[0];
-    char f = 'm';
+    char f = 'a';
     for (int i = 0; i < mr_len[0]; i++)
     {
         *c = f;
         c++;
-        f++;
+        if(i % msg_len == 0 && i > 0) {
+            f++;
+            if(f > 'z') {
+                f = 'a';
+            }
+        }
     }
     printf("mem size %d, mem: %s\n", mr_len[0], (char*)mr_base[0]);
+
     count[0] = pending_msgs;
     for (int i = 1; i < num_conns; i++)
     {
@@ -104,28 +110,15 @@ int main(int argc, char* argv[])
         iter ++;
         for (int i = 0; i < num_conns; i++)
         {
+            printf("Start count: %d\n", count[i]);
             int ret = rdma_cq_poll(fd[i], ev, WQSIZE);
             if (ret < 0)
             {
                 fprintf(stderr, "%s():%d\n", __func__, __LINE__);
                 return -1;
             }
-#ifndef NOVERIFY
-            for (int j = 0; j < ret; j++)
-            {
-                if (ev[j].status != RDMA_SUCCESS)
-                {
-                    fprintf(stderr, "%s():%d id=%u status=%u\n", __func__, __LINE__, ev[j].id, ev[j].status);
-                    return -1;
-                }
+            printf("ret: %d, Mid count: %d\n", ret, ret+count[i]);
 
-                if (ev[j].id % 200 == 0)
-                {
-                    total_latency += (rdtsc() - latency[ev[j].id]);
-                    latency_count++;
-                }
-            }
-#endif
             count[i] += ret;
             compl_msgs += ret;
 
@@ -144,7 +137,36 @@ int main(int argc, char* argv[])
                     latency[ret] = rdtsc();
                 }
             }
+            printf("End count: %d\n", count[i]-j);
             count[i] -= j;
+            /*
+            ret = rdma_cq_poll(fd[i], ev, WQSIZE);
+            if (ret < 0)
+            {
+                fprintf(stderr, "%s():%d\n", __func__, __LINE__);
+                return -1;
+            }
+
+            count[i] += ret;
+            compl_msgs += ret;
+
+            j = 0;
+            for (j = 0; j < count[i]; j++)
+            {
+                int ret = rdma_read(fd[i], msg_len, 0+msg_len, 0);
+                if (ret < 0)
+                {
+                    fprintf(stderr, "%s():%d\n", __func__, __LINE__);
+                    return -1;
+                }
+
+                if (ret % 200 == 0)
+                {
+                    latency[ret] = rdtsc();
+                }
+            }
+            count[i] -= j;
+            */
         }
 
         if (iter % 50000000 == 0)
