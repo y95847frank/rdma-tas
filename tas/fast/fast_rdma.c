@@ -417,7 +417,7 @@ static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
     hdr.loffset = t_beui32(wqe->loff);
 
     fprintf(stderr,"hdr_id:%u\n",wqe->id);
-    DEBUG
+    //DEBUG
     uint8_t type = hdr.type;
     if ((type & RDMA_RESPONSE) == RDMA_RESPONSE)
       {
