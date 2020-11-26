@@ -187,7 +187,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
     }
     else
     {
-      wqe_pending_rx = 16 - fs->pending_rq_state;
+      wqe_pending_rx = 20 - fs->pending_rq_state;
       rx_bump_len = MIN(wqe_pending_rx, rx_bump);
       fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, fs->pending_rq_buf + fs->pending_rq_state);
 
