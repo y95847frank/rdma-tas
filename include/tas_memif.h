@@ -359,7 +359,7 @@ struct flextcp_pl_flowst {
   uint32_t rq_tail;
 // 192
   /** Buffer for partially received request */
-  uint8_t pending_rq_buf[16];
+  uint8_t pending_rq_buf[20];
   /** RQ parsing state */
   uint32_t pending_rq_state;
   /** Offset to next segment in partially transmitted RQ entry */
