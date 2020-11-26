@@ -212,9 +212,8 @@ struct rdma_hdr {
   beui32_t id;
   beui32_t offset;
   beui32_t length;
-  beui32_t loffset;
 } __attribute__((packed));
-STATIC_ASSERT(sizeof(struct rdma_hdr) == 20, rdma_hdr);
+STATIC_ASSERT(sizeof(struct rdma_hdr) == 16, rdma_hdr);
 
 /******************************************************************************/
 /* TCP packets */
