@@ -12,7 +12,7 @@
 #include "tcp_common.h"
 
 #define RDMA_RQ_PENDING_PARSE 0x0
-#define RDMA_RQ_PENDING_DATA  0x10
+#define RDMA_RQ_PENDING_DATA  0x14
 
 static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
       uint32_t len, void* src);
@@ -210,7 +210,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
             wqe->status = RDMA_OUT_OF_BOUNDS;
         else
            wqe->status = RDMA_PENDING;
-        wqe->roff = 0;
+        wqe->roff = f_beui32(hdr->loffset);
 
         // fprintf(stderr,"wqe_id:%u\n",wqe->id);
         
@@ -414,6 +414,7 @@ static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
     hdr.offset = t_beui32(wqe->roff);
     hdr.id = t_beui32(wqe->id);
     hdr.flags = t_beui16(0);
+    hdr.loffset = t_beui32(wqe->loff);
 
     // fprintf(stderr,"hdr_id:%u\n",wqe->id);
     // DEBUG
