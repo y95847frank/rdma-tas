@@ -12,7 +12,7 @@
 #include "tcp_common.h"
 
 #define RDMA_RQ_PENDING_PARSE 0x0
-#define RDMA_RQ_PENDING_DATA  0x10
+#define RDMA_RQ_PENDING_DATA  0x14
 
 static inline void fast_rdma_txbuf_copy(struct flextcp_pl_flowst* fl,
       uint32_t len, void* src);
@@ -187,7 +187,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
     }
     else
     {
-      wqe_pending_rx = 16 - fs->pending_rq_state;
+      wqe_pending_rx = 20 - fs->pending_rq_state;
       rx_bump_len = MIN(wqe_pending_rx, rx_bump);
       fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, fs->pending_rq_buf + fs->pending_rq_state);
 
@@ -210,9 +210,9 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
             wqe->status = RDMA_OUT_OF_BOUNDS;
         else
            wqe->status = RDMA_PENDING;
-        wqe->roff = 0;
+        wqe->roff = f_beui32(hdr->loffset);
 
-        // fprintf(stderr,"wqe_id:%u\n",wqe->id);
+        //fprintf(stderr,"wqe_id:%u\n",wqe->id);
         
         uint8_t type = hdr->type;
         if ((type & RDMA_RESPONSE) == RDMA_RESPONSE)
@@ -414,6 +414,7 @@ static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
     hdr.offset = t_beui32(wqe->roff);
     hdr.id = t_beui32(wqe->id);
     hdr.flags = t_beui16(0);
+    hdr.loffset = t_beui32(wqe->loff);
 
     // fprintf(stderr,"hdr_id:%u\n",wqe->id);
     // //DEBUG
