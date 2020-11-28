@@ -144,7 +144,7 @@ int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
  */
 int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
 
-struct ibv_mr *rdma_reg_write(struct rdma_cm_id *id, void *addr, uint32_t length)
+struct ibv_mr *rdma_reg_write(struct rdma_cm_id *id, void *addr, uint32_t length);
 
 /**
  * Fetch completion event with the status of a completed operation.
