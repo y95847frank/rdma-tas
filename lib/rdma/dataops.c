@@ -131,18 +131,21 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
 }
 
 struct ibv_mr *rdma_reg_write(struct rdma_cm_id *cm_id, void *addr, uint32_t length) {
+    struct ibv_mr* r = malloc(sizeof(struct ibv_mr));
     // 1. Find listener socket
     int fd = cm_id->fd;
     if (fd < 1 || fd >= MAX_FD_NUM)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
-        return -1;
+        r->id = -1;
+        return r;
     }
     struct rdma_socket* s = fdmap[fd];
     if (s->type != RDMA_CONN_SOCKET)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
-        return -1;
+        r->id = -1;
+        return r;
     }
     struct flextcp_connection* c = &s->c;
 
@@ -150,7 +153,8 @@ struct ibv_mr *rdma_reg_write(struct rdma_cm_id *cm_id, void *addr, uint32_t len
     if (((uint64_t) cm_id->loff + length) > c->mr_len)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
-        return -1;
+        r->id = -1;
+        return r;
     }
 
     // 3. Acquire Work Queue Entry
@@ -158,7 +162,8 @@ struct ibv_mr *rdma_reg_write(struct rdma_cm_id *cm_id, void *addr, uint32_t len
     if (c->wq_len + c->cq_len == c->wq_size){
         // Queue full!
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
-        return -1;
+        r->id = -1;
+        return r;
     }
 
 	uint32_t wq_head = (c->wq_tail + c->wq_len) % c->wq_size;
@@ -184,10 +189,10 @@ struct ibv_mr *rdma_reg_write(struct rdma_cm_id *cm_id, void *addr, uint32_t len
         // Undo the length increment (effectively revert adding wqe)
 		c->wq_len = old_len;
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
-        return -1;
+        r->id = -1;
+        return r;
     }
-
-    struct ibv_mr* r = malloc(sizeof(struct ibv_mr));
+ 
     r->id = id;
     return r;
 }
