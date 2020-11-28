@@ -42,6 +42,16 @@ struct rdma_wqe {
     uint32_t len;
 } __attribute__((packed));
 
+struct rdma_cm_id {
+    int fd;
+    uint32_t loff;  /**> Local offset */
+    uint32_t roff;  /**> Remote offset */
+};
+
+struct ibv_mr {
+    int id;
+};
+
 /**
  * Initialize application library to communicate with TAS.
  * [1] Setup IPC mechanisms with TAS
@@ -133,6 +143,8 @@ int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
  *         query the SUCCESS or FAILURE of an operation using completion queue.
  */
 int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
+
+struct ibv_mr *rdma_reg_write(struct rdma_cm_id *id, void *addr, size_t length)
 
 /**
  * Fetch completion event with the status of a completed operation.
