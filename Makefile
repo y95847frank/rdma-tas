@@ -73,6 +73,7 @@ all: lib/libtas_rdma.so lib/libtas.so \
 	tas/tas
 
 tests: $(TESTS)
+tests_ping: $(TESTS_PING)
 
 # run all simple testcases
 run-tests: $(TESTS_AUTO)
