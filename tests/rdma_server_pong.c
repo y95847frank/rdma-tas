@@ -36,11 +36,11 @@ int main(int argc, char* argv[])
     localaddr.sin_family = AF_INET;
     localaddr.sin_addr.s_addr = inet_addr(ip);
     localaddr.sin_port = htons(port);
-    int lfd = rdma_listen(&localaddr, 1024);
+    int lfd = rdma_tas_listen(&localaddr, 1024);
 
     for (int i = 0; i < num_connections; i++)
     {
-        fd[i] = rdma_accept(lfd, &remoteaddr, &mr_base[i], &mr_len[i]);
+        fd[i] = rdma_tas_accept(lfd, &remoteaddr, &mr_base[i], &mr_len[i]);
 
         if (fd[i] < 0)
         {

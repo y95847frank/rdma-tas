@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     
     for (int i = 0; i < num_conns; i++)
     {
-        fd[i] = rdma_connect(&remoteaddr, &mr_base[i], &mr_len[i]);
+        fd[i] = rdma_tas_connect(&remoteaddr, &mr_base[i], &mr_len[i]);
 
         if (fd[i] < 0)
         {
@@ -74,6 +74,7 @@ int main(int argc, char* argv[])
     }
 
     fprintf(stderr, "Connections established: %d\n", num_conns);
+    fprintf(stderr, "Type Enter to start PingPong.\n");
     getchar();
 
     fprintf(stderr, "Pinging %s with %d of data:\n", rip, msg_len);

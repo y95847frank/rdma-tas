@@ -28,3 +28,4 @@ doc/latex
 doc/html
 .dockerwrap
 Makefile.local
+.DS_Store
