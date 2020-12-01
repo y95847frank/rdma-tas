@@ -111,6 +111,7 @@ struct rdma_addr {
 	} addr;
 };
 
+
 struct rdma_route {
 	struct rdma_addr	 addr;
 	struct ibv_sa_path_rec	*path_rec;
@@ -371,22 +372,6 @@ int rdma_resolve_addr(struct rdma_cm_id *id, struct sockaddr *src_addr,
 		      struct sockaddr *dst_addr, int timeout_ms);
 
 /**
- * rdma_resolve_route - Resolve the route information needed to establish a connection.
- * @id: RDMA identifier.
- * @timeout_ms: Time to wait for resolution to complete.
- * Description:
- *   Resolves an RDMA route to the destination address in order to establish
- *   a connection.  The destination address must have already been resolved
- *   by calling rdma_resolve_addr.
- * Notes:
- *   This is called on the client side of a connection after calling
- *   rdma_resolve_addr, but before calling rdma_connect.
- * See also:
- *   rdma_resolve_addr, rdma_connect, rdma_get_cm_event
- */
-int rdma_resolve_route(struct rdma_cm_id *id, int timeout_ms);
-
-/**
  * rdma_create_qp - Allocate a QP.
  * @id: RDMA identifier.
  * @pd: Optional protection domain for the QP.
@@ -409,8 +394,6 @@ int rdma_resolve_route(struct rdma_cm_id *id, int timeout_ms);
  */
 int rdma_create_qp(struct rdma_cm_id *id, struct ibv_pd *pd,
 		   struct ibv_qp_init_attr *qp_init_attr);
-int rdma_create_qp_ex(struct rdma_cm_id *id,
-		      struct ibv_qp_init_attr_ex *qp_init_attr);
 
 /**
  * rdma_destroy_qp - Deallocate a QP.
@@ -482,11 +465,6 @@ int rdma_establish(struct rdma_cm_id *id);
 int rdma_listen(struct rdma_cm_id *id, int backlog);
 
 /**
- * rdma_get_request
- */
-int rdma_get_request(struct rdma_cm_id *listen, struct rdma_cm_id **id);
-
-/**
  * rdma_accept - Called to accept a connection request.
  * @id: Connection identifier associated with the request.
  * @conn_param: Optional information needed to establish the connection.
@@ -526,35 +504,6 @@ int rdma_accept(struct rdma_cm_id *id, struct rdma_conn_param *conn_param);
 int rdma_reject(struct rdma_cm_id *id, const void *private_data,
 		uint8_t private_data_len);
 
-/**
- * rdma_reject_ece - Called to reject a connection request with ECE
- * rejected reason.
- * The same as rdma_reject()
- */
-int rdma_reject_ece(struct rdma_cm_id *id, const void *private_data,
-		uint8_t private_data_len);
-
-/**
- * rdma_notify - Notifies the librdmacm of an asynchronous event.
- * @id: RDMA identifier.
- * @event: Asynchronous event.
- * Description:
- *   Used to notify the librdmacm of asynchronous events that have occurred
- *   on a QP associated with the rdma_cm_id.
- * Notes:
- *   Asynchronous events that occur on a QP are reported through the user's
- *   device event handler.  This routine is used to notify the librdmacm of
- *   communication events.  In most cases, use of this routine is not
- *   necessary, however if connection establishment is done out of band
- *   (such as done through Infiniband), it's possible to receive data on a
- *   QP that is not yet considered connected.  This routine forces the
- *   connection into an established state in this case in order to handle
- *   the rare situation where the connection never forms on its own.
- *   Events that should be reported to the CM are: IB_EVENT_COMM_EST.
- * See also:
- *   rdma_connect, rdma_accept, rdma_listen
- */
-int rdma_notify(struct rdma_cm_id *id, enum ibv_event_type event);
 
 /**
  * rdma_disconnect - This function disconnects a connection.
@@ -566,99 +515,6 @@ int rdma_notify(struct rdma_cm_id *id, enum ibv_event_type event);
  *   rdma_connect, rdma_listen, rdma_accept
  */
 int rdma_disconnect(struct rdma_cm_id *id);
-
-/**
- * rdma_join_multicast - Joins a multicast group.
- * @id: Communication identifier associated with the request.
- * @addr: Multicast address identifying the group to join.
- * @context: User-defined context associated with the join request.
- * Description:
- *   Joins a multicast group and attaches an associated QP to the group.
- * Notes:
- *   Before joining a multicast group, the rdma_cm_id must be bound to
- *   an RDMA device by calling rdma_bind_addr or rdma_resolve_addr.  Use of
- *   rdma_resolve_addr requires the local routing tables to resolve the
- *   multicast address to an RDMA device.  The user must call
- *   rdma_leave_multicast to leave the multicast group and release any
- *   multicast resources.  The context is returned to the user through
- *   the private_data field in the rdma_cm_event.
- * See also:
- *   rdma_leave_multicast, rdma_bind_addr, rdma_resolve_addr, rdma_create_qp
- */
-int rdma_join_multicast(struct rdma_cm_id *id, struct sockaddr *addr,
-			void *context);
-
-/**
- * rdma_leave_multicast - Leaves a multicast group.
- * @id: Communication identifier associated with the request.
- * @addr: Multicast address identifying the group to leave.
- * Description:
- *   Leaves a multicast group and detaches an associated QP from the group.
- * Notes:
- *   Calling this function before a group has been fully joined results in
- *   canceling the join operation.  Users should be aware that messages
- *   received from the multicast group may stilled be queued for
- *   completion processing immediately after leaving a multicast group.
- *   Destroying an rdma_cm_id will automatically leave all multicast groups.
- * See also:
- *   rdma_join_multicast, rdma_destroy_qp
- */
-int rdma_leave_multicast(struct rdma_cm_id *id, struct sockaddr *addr);
-
-/**
- * rdma_multicast_ex - Joins a multicast group with options.
- * @id: Communication identifier associated with the request.
- * @mc_join_attr: Extensive struct containing multicast join parameters.
- * @context: User-defined context associated with the join request.
- * Description:
- *  Joins a multicast group with options. Currently supporting MC join flags.
- *  The QP will be attached based on the given join flag.
- *  Join message will be sent according to the join flag.
- * Notes:
- *  Before joining a multicast group, the rdma_cm_id must be bound to
- *  an RDMA device by calling rdma_bind_addr or rdma_resolve_addr.  Use of
- *  rdma_resolve_addr requires the local routing tables to resolve the
- *  multicast address to an RDMA device.  The user must call
- *  rdma_leave_multicast to leave the multicast group and release any
- *  multicast resources.  The context is returned to the user through
- *  the private_data field in the rdma_cm_event.
- * See also:
- *  rdma_leave_multicast, rdma_bind_addr, rdma_resolve_addr, rdma_create_qp
- */
-int rdma_join_multicast_ex(struct rdma_cm_id *id,
-			   struct rdma_cm_join_mc_attr_ex *mc_join_attr,
-			   void *context);
-
-/**
- * rdma_get_cm_event - Retrieves the next pending communication event.
- * @channel: Event channel to check for events.
- * @event: Allocated information about the next communication event.
- * Description:
- *   Retrieves a communication event.  If no events are pending, by default,
- *   the call will block until an event is received.
- * Notes:
- *   The default synchronous behavior of this routine can be changed by
- *   modifying the file descriptor associated with the given channel.  All
- *   events that are reported must be acknowledged by calling rdma_ack_cm_event.
- *   Destruction of an rdma_cm_id will block until related events have been
- *   acknowledged.
- * See also:
- *   rdma_ack_cm_event, rdma_create_event_channel, rdma_event_str
- */
-int rdma_get_cm_event(struct rdma_event_channel *channel,
-		      struct rdma_cm_event **event);
-
-/**
- * rdma_ack_cm_event - Free a communication event.
- * @event: Event to be released.
- * Description:
- *   All events which are allocated by rdma_get_cm_event must be released,
- *   there should be a one-to-one correspondence between successful gets
- *   and acks.
- * See also:
- *   rdma_get_cm_event, rdma_destroy_id
- */
-int rdma_ack_cm_event(struct rdma_cm_event *event);
 
 __be16 rdma_get_src_port(struct rdma_cm_id *id);
 __be16 rdma_get_dst_port(struct rdma_cm_id *id);
@@ -673,30 +529,6 @@ static inline struct sockaddr *rdma_get_peer_addr(struct rdma_cm_id *id)
 	return &id->route.addr.dst_addr;
 }
 
-/**
- * rdma_get_devices - Get list of RDMA devices currently available.
- * @num_devices: If non-NULL, set to the number of devices returned.
- * Description:
- *   Return a NULL-terminated array of opened RDMA devices.  Callers can use
- *   this routine to allocate resources on specific RDMA devices that will be
- *   shared across multiple rdma_cm_id's.
- * Notes:
- *   The returned array must be released by calling rdma_free_devices.  Devices
- *   remain opened while the librdmacm is loaded.
- * See also:
- *   rdma_free_devices
- */
-struct ibv_context **rdma_get_devices(int *num_devices);
-
-/**
- * rdma_free_devices - Frees the list of devices returned by rdma_get_devices.
- * @list: List of devices returned from rdma_get_devices.
- * Description:
- *   Frees the device array returned by rdma_get_devices.
- * See also:
- *   rdma_get_devices
- */
-void rdma_free_devices(struct ibv_context **list);
 
 /**
  * rdma_event_str - Returns a string representation of an rdma cm event.
@@ -727,24 +559,6 @@ enum {
 };
 
 /**
- * rdma_set_option - Set options for an rdma_cm_id.
- * @id: Communication identifier to set option for.
- * @level: Protocol level of the option to set.
- * @optname: Name of the option to set.
- * @optval: Reference to the option data.
- * @optlen: The size of the %optval buffer.
- */
-int rdma_set_option(struct rdma_cm_id *id, int level, int optname,
-		    void *optval, size_t optlen);
-
-/**
- * rdma_migrate_id - Move an rdma_cm_id to a new event channel.
- * @id: Communication identifier to migrate.
- * @channel: New event channel for rdma_cm_id events.
- */
-int rdma_migrate_id(struct rdma_cm_id *id, struct rdma_event_channel *channel);
-
-/**
  * rdma_getaddrinfo - RDMA address and route resolution service.
  */
 int rdma_getaddrinfo(const char *node, const char *service,
@@ -763,23 +577,6 @@ void rdma_freeaddrinfo(struct rdma_addrinfo *res);
  */
 int rdma_init_qp_attr(struct rdma_cm_id *id, struct ibv_qp_attr *qp_attr,
 		      int *qp_attr_mask);
-
-/**
- * rdma_set_local_ece - Set local ECE options to be used for REQ/REP
- * communication. In use to implement ECE handshake in external QP.
- * @id: Communication identifier to establish connection
- * @ece: ECE parameters
- */
-int rdma_set_local_ece(struct rdma_cm_id *id, struct ibv_ece *ece);
-
-/**
- * rdma_get_remote_ece - Provide remote ECE parameters as received
- * in REQ/REP events. In use to implement ECE handshake in external QP.
- * @id: Communication identifier to establish connection
- * @ece: ECE parameters
- */
-int rdma_get_remote_ece(struct rdma_cm_id *id, struct ibv_ece *ece);
-
 // rdma_verbs.h
 
 static inline int rdma_seterrno(int ret)
@@ -852,57 +649,57 @@ rdma_post_recvv(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
 		return rdma_seterrno(ibv_post_recv(id->qp, &wr, &bad));
 }
 
-static inline int
-rdma_post_sendv(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
-		int nsge, int flags)
-{
-	struct ibv_send_wr wr, *bad;
+// static inline int
+// rdma_post_sendv(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
+// 		int nsge, int flags)
+// {
+// 	struct ibv_send_wr wr, *bad;
 
-	wr.wr_id = (uintptr_t) context;
-	wr.next = NULL;
-	wr.sg_list = sgl;
-	wr.num_sge = nsge;
-	wr.opcode = IBV_WR_SEND;
-	wr.send_flags = flags;
+// 	wr.wr_id = (uintptr_t) context;
+// 	wr.next = NULL;
+// 	wr.sg_list = sgl;
+// 	wr.num_sge = nsge;
+// 	wr.opcode = IBV_WR_SEND;
+// 	wr.send_flags = flags;
 
-	return rdma_seterrno(ibv_post_send(id->qp, &wr, &bad));
-}
+// 	return rdma_seterrno(ibv_post_send(id->qp, &wr, &bad));
+// }
 
-static inline int
-rdma_post_readv(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
-		int nsge, int flags, uint64_t remote_addr, uint32_t rkey)
-{
-	struct ibv_send_wr wr, *bad;
+// static inline int
+// rdma_post_readv(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
+// 		int nsge, int flags, uint64_t remote_addr, uint32_t rkey)
+// {
+// 	struct ibv_send_wr wr, *bad;
 
-	wr.wr_id = (uintptr_t) context;
-	wr.next = NULL;
-	wr.sg_list = sgl;
-	wr.num_sge = nsge;
-	wr.opcode = IBV_WR_RDMA_READ;
-	wr.send_flags = flags;
-	wr.wr.rdma.remote_addr = remote_addr;
-	wr.wr.rdma.rkey = rkey;
+// 	wr.wr_id = (uintptr_t) context;
+// 	wr.next = NULL;
+// 	wr.sg_list = sgl;
+// 	wr.num_sge = nsge;
+// 	wr.opcode = IBV_WR_RDMA_READ;
+// 	wr.send_flags = flags;
+// 	wr.wr.rdma.remote_addr = remote_addr;
+// 	wr.wr.rdma.rkey = rkey;
 
-	return rdma_seterrno(ibv_post_send(id->qp, &wr, &bad));
-}
+// 	return rdma_seterrno(ibv_post_send(id->qp, &wr, &bad));
+// }
 
-static inline int
-rdma_post_writev(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
-		 int nsge, int flags, uint64_t remote_addr, uint32_t rkey)
-{
-	struct ibv_send_wr wr, *bad;
+// static inline int
+// rdma_post_writev(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
+// 		 int nsge, int flags, uint64_t remote_addr, uint32_t rkey)
+// {
+// 	struct ibv_send_wr wr, *bad;
 
-	wr.wr_id = (uintptr_t) context;
-	wr.next = NULL;
-	wr.sg_list = sgl;
-	wr.num_sge = nsge;
-	wr.opcode = IBV_WR_RDMA_WRITE;
-	wr.send_flags = flags;
-	wr.wr.rdma.remote_addr = remote_addr;
-	wr.wr.rdma.rkey = rkey;
+// 	wr.wr_id = (uintptr_t) context;
+// 	wr.next = NULL;
+// 	wr.sg_list = sgl;
+// 	wr.num_sge = nsge;
+// 	wr.opcode = IBV_WR_RDMA_WRITE;
+// 	wr.send_flags = flags;
+// 	wr.wr.rdma.remote_addr = remote_addr;
+// 	wr.wr.rdma.rkey = rkey;
 
-	return rdma_seterrno(ibv_post_send(id->qp, &wr, &bad));
-}
+// 	return rdma_seterrno(ibv_post_send(id->qp, &wr, &bad));
+// }
 
 /*
  * Simple send, receive, and RDMA calls.
@@ -935,120 +732,12 @@ rdma_post_send(struct rdma_cm_id *id, void *context, void *addr,
 	return rdma_post_sendv(id, context, &sge, 1, flags);
 }
 
-static inline int
-rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
+int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
 	       size_t length, struct ibv_mr *mr, int flags,
-	       uint64_t remote_addr, uint32_t rkey)
-{
-	struct ibv_sge sge;
-
-	sge.addr = (uint64_t) (uintptr_t) addr;
-	sge.length = (uint32_t) length;
-	sge.lkey = mr->lkey;
-
-	return rdma_post_readv(id, context, &sge, 1, flags, remote_addr, rkey);
-}
-
-static inline int
-rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
+	       uint64_t remote_addr, uint32_t rkey);
+int rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
 		size_t length, struct ibv_mr *mr, int flags,
-		uint64_t remote_addr, uint32_t rkey)
-{
-	struct ibv_sge sge;
-
-	sge.addr = (uint64_t) (uintptr_t) addr;
-	sge.length = (uint32_t) length;
-	sge.lkey = mr ? mr->lkey : 0;
-
-	return rdma_post_writev(id, context, &sge, 1, flags, remote_addr, rkey);
-}
-
-static inline int
-rdma_post_ud_send(struct rdma_cm_id *id, void *context, void *addr,
-		  size_t length, struct ibv_mr *mr, int flags,
-		  struct ibv_ah *ah, uint32_t remote_qpn)
-{
-	struct ibv_send_wr wr, *bad;
-	struct ibv_sge sge;
-
-	sge.addr = (uint64_t) (uintptr_t) addr;
-	sge.length = (uint32_t) length;
-	sge.lkey = mr ? mr->lkey : 0;
-
-	wr.wr_id = (uintptr_t) context;
-	wr.next = NULL;
-	wr.sg_list = &sge;
-	wr.num_sge = 1;
-	wr.opcode = IBV_WR_SEND;
-	wr.send_flags = flags;
-	wr.wr.ud.ah = ah;
-	wr.wr.ud.remote_qpn = remote_qpn;
-	wr.wr.ud.remote_qkey = RDMA_UDP_QKEY;
-
-	return rdma_seterrno(ibv_post_send(id->qp, &wr, &bad));
-}
-
-static inline int
-rdma_get_send_comp(struct rdma_cm_id *id, struct ibv_wc *wc)
-{
-	struct ibv_cq *cq;
-	void *context;
-	int ret;
-
-	do {
-		ret = ibv_poll_cq(id->send_cq, 1, wc);
-		if (ret)
-			break;
-
-		ret = ibv_req_notify_cq(id->send_cq, 0);
-		if (ret)
-			return rdma_seterrno(ret);
-
-		ret = ibv_poll_cq(id->send_cq, 1, wc);
-		if (ret)
-			break;
-
-		ret = ibv_get_cq_event(id->send_cq_channel, &cq, &context);
-		if (ret)
-			return ret;
-
-		assert(cq == id->send_cq && context == id);
-		ibv_ack_cq_events(id->send_cq, 1);
-	} while (1);
-
-	return (ret < 0) ? rdma_seterrno(ret) : ret;
-}
-
-static inline int
-rdma_get_recv_comp(struct rdma_cm_id *id, struct ibv_wc *wc)
-{
-	struct ibv_cq *cq;
-	void *context;
-	int ret;
-
-	do {
-		ret = ibv_poll_cq(id->recv_cq, 1, wc);
-		if (ret)
-			break;
-
-		ret = ibv_req_notify_cq(id->recv_cq, 0);
-		if (ret)
-			return rdma_seterrno(ret);
-
-		ret = ibv_poll_cq(id->recv_cq, 1, wc);
-		if (ret)
-			break;
-
-		ret = ibv_get_cq_event(id->recv_cq_channel, &cq, &context);
-		if (ret)
-			return ret;
-
-		assert(cq == id->recv_cq && context == id);
-		ibv_ack_cq_events(id->recv_cq, 1);
-	} while (1);
-
-	return (ret < 0) ? rdma_seterrno(ret) : ret;
-}
+		uint64_t remote_addr, uint32_t rkey);
 
 
 #ifdef __cplusplus
