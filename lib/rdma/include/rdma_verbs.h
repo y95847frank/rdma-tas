@@ -138,6 +138,8 @@ struct rdma_cm_id {
 	struct ibv_srq		*srq;
 	struct ibv_pd		*pd;
 	enum ibv_qp_type	qp_type;
+	//add ibv_mr 
+	struct ibv_mr *mr;
 };
 
 enum {

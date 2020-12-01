@@ -65,7 +65,7 @@ int rdma_init(void);
  *                  (Refer to *listen()* semantics)
  * @return File Descriptor on SUCCESS. -1 on FAILURE.
  */
-int rdma_listen(const struct sockaddr_in* localaddr, int backlog);
+int rdma_tas_listen(const struct sockaddr_in* localaddr, int backlog);
 
 /**
  * Accept pending RDMA connections on a listen socket.
@@ -78,7 +78,7 @@ int rdma_listen(const struct sockaddr_in* localaddr, int backlog);
  * 
  * @return File Descriptor on SUCCESS. -1 on FAILURE.
  */
-int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr, void **mr_base, uint32_t *mr_len);
+int rdma_tas_accept(int listenfd, struct sockaddr_in* remoteaddr, void **mr_base, uint32_t *mr_len);
 
 /**
  * Connect to a remote RDMA-capable server.
@@ -90,7 +90,7 @@ int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr, void **mr_base, ui
  * 
  * @return File Descriptor on SUCCESS. -1 on FAILURE.
  */
-int rdma_connect(const struct sockaddr_in* remoteaddr, void **mr_base, uint32_t *mr_len);
+int rdma_tas_connect(const struct sockaddr_in* remoteaddr, void **mr_base, uint32_t *mr_len);
 
 /**
  * One-sided communication primitive to read data

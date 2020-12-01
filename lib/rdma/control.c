@@ -63,7 +63,7 @@ int rdma_init(void)
     return 0;
 }
 
-int rdma_listen(const struct sockaddr_in* localaddr, int backlog)
+int rdma_tas_listen(const struct sockaddr_in* localaddr, int backlog)
 {
     // 1. Validate localaddr
     // TODO: Check if localaddr is same as TAS addr
@@ -140,7 +140,7 @@ int rdma_listen(const struct sockaddr_in* localaddr, int backlog)
     return fd;
 }
 
-int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr,
+int rdma_tas_accept(int listenfd, struct sockaddr_in* remoteaddr,
 		void **mr_base, uint32_t *mr_len)
 {
     // 1. Find listener rdma_socket
@@ -216,7 +216,7 @@ int rdma_accept(int listenfd, struct sockaddr_in* remoteaddr,
     return fd;
 }
 
-int rdma_connect(const struct sockaddr_in* remoteaddr, void **mr_base,
+int rdma_tas_connect(const struct sockaddr_in* remoteaddr, void **mr_base,
 		uint32_t *mr_len)
 {
     // 1. Validate Remoteaddr

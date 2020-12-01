@@ -1,3 +1,11 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "tas_ll.h"
+#include "tas_rdma.h"
+
+#include "internal.h"
 #include "include/rdma_verbs.h"
 
 struct rdma_event_channel *rdma_create_event_channel(void)
@@ -100,27 +108,65 @@ int rdma_connect(struct rdma_cm_id *id, struct rdma_conn_param *conn_param){
 
 
 int rdma_establish(struct rdma_cm_id *id){
+
     // Call rdma_connect
+    struct sockaddr_in *remoteaddr =  (struct sockaddr_in *)id->route->addr.dst_addr;
+    
+    // add mr to rdma_cm_id, because rdma_tas_connect does the work of mem reg?? 
+    int fd = rdma_tas_connect(&remoteaddr,&id->mr->addr,&id->mr->length);
+
     // after we got fd from connect/accept, store it to id->send_cq_channel->fd
+    if(fd){
+        id->send_cq_channel->fd = fd;
+        return 1;
+    }
+    else return -1;
+    
 }
 
 int rdma_listen(struct rdma_cm_id *id, int backlog){
+
     // Call rdma_listen here
+    struct sockaddr_in *localaddr = (struct sockaddr_in *)id->route->addr.src_addr;
+    int lfd = rdma_tas_listen(&localaddr, backlog);
+
     // after we got fd from listen, store it to id->recv_cq_channel->fd
+     if(lfd){
+        id->recv_cq_channel->fd = lfd;
+        return 1;
+    }
+    else return -1;
+
 }
 
 int rdma_accept(struct rdma_cm_id *id, struct rdma_conn_param *conn_param){
+
     // Call rdma_accept here
+    int fd =  rdma_tas_accept(id->send_cq_channel->fd, id->route.addr.dst_addr, &id->mr->addr, &id->mr->length);
+
     // after we got fd from connect/accept, store it to id->send_cq_channel->fd
+    if(fd){
+        id->send_cq_channel->fd = fd;
+        return 1;
+    }
+    else return -1;
 }
 
 int rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
 		size_t length, struct ibv_mr *mr, int flags,
 		uint64_t remote_addr, uint32_t rkey)
 {
-    //ignore flags, rkey, and context
+    /* ignore flags, rkey
+       let context hold the return value (id) of rdma_write
+       ignore mr because mr is now put into id
+       from doc: addr - The local address of the source of the write request. Let it hold loffset here?
+       from doc: remote_addr - The address of the remote registered memory to write into.
+       But remote mem is always registered to the config value, so let remote_addr here hold roffset?
+    */
+
     // write addr to remote_addr
-    // fd we use id->send_cq_channel->fd
+    *context = rdma_write(id->send_cq_channel->fd, length, *addr, remote_addr);
+
 }
 int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
 	       size_t length, struct ibv_mr *mr, int flags,
@@ -128,4 +174,6 @@ int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
 {
     // similarly with write
     // fd we use id->send_cq_channel->fd
+
+    *context = rdma_read(id->send_cq_channel->fd, length, *addr, remote_addr);
 }
