@@ -61,11 +61,12 @@ TESTS= \
 	tests/rdma_multi_server \
 	tests/rdma_multi_client \
 	tests/rdma_multi_client_read \
-	tests/rdma_client_ping \
-	tests/rdma_server_pong \
 	$(TESTS_AUTO) \
 	$(TESTS_AUTO_FULL)
 
+TESTS_PING= \
+	tests/rdma_client_ping \
+	tests/rdma_server_pong \
 
 all: lib/libtas_rdma.so lib/libtas.so \
 	tools/tracetool tools/statetool tools/scaletool \
