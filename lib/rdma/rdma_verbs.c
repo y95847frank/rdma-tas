@@ -173,6 +173,7 @@ int rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }    
+    id->op_id = ret;
     return 0;
 
 }
