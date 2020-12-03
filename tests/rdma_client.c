@@ -18,7 +18,7 @@ int main()
   void *mr_base;
   uint32_t mr_len;
 
-  int fd = rdma_connect(&remoteaddr, &mr_base, &mr_len);
+  int fd = rdma_tas_connect(&remoteaddr, &mr_base, &mr_len);
 
   if (fd < 0)
     fprintf(stderr, "Connection failed\n");
