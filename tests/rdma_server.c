@@ -18,8 +18,8 @@ int main()
     void *mr_base;
     uint32_t mr_len;
 
-    int lfd = rdma_listen(&localaddr, 8);
-    int fd = rdma_accept(lfd, &remoteaddr, &mr_base, &mr_len);
+    int lfd = rdma_tas_listen(&localaddr, 8);
+    int fd = rdma_tas_accept(lfd, &remoteaddr, &mr_base, &mr_len);
 
     if (fd < 0)
         fprintf(stderr, "Connection failed\n");
