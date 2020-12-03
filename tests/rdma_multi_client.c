@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < num_conns; i++)
     {
-        fd[i] = rdma_connect(&remoteaddr, &mr_base[i], &mr_len[i]);
+        fd[i] = rdma_tas_connect(&remoteaddr, &mr_base[i], &mr_len[i]);
 
         if (fd[i] < 0)
         {
