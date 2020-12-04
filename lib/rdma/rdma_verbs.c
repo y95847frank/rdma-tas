@@ -4,7 +4,7 @@
 
 #include "tas_ll.h"
 #include "tas_rdma.h"
-
+#include "utils.h"
 #include "internal.h"
 #include "include/rdma_verbs.h"
 
