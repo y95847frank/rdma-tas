@@ -53,8 +53,6 @@ TESTS_AUTO_FULL= \
 	tests/full/tas_linux \
 
 TESTS_PING= \
-	tests/rdma_client_ping \
-	tests/rdma_server_pong \
 	tests/rdma_client_ping_new \
 	tests/rdma_server_pong_new
 
