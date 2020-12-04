@@ -543,7 +543,7 @@ int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
     }
 
     id->op_id = wid;
-    memcpy(addr, id->mr->addr, length);
+    memcpy(addr, wid->mr->addr, length);
     return 0;
 }
 

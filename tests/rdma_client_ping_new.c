@@ -163,7 +163,8 @@ int main(int argc, char* argv[])
                     rdma_reg_write();
                 */
                 //int ret = rdma_write(fd[i], msg_len, 0+msg_len*j, 0+msg_len*j);
-                int ret = rdma_post_write(id[i], NULL, (char* )mr_base[i] + msg_len*j, msg_len, NULL, 0, msg_len*j, 0);
+                int ret = rdma_post_write(id[i], NULL, (char* )mr_base[i] + msg_len*j, 
+                                            msg_len, NULL, 0, msg_len*j, 0);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
@@ -188,7 +189,8 @@ int main(int argc, char* argv[])
             {
 
                 //int ret = rdma_read(fd[i], msg_len, read_base+msg_len*k, 0+msg_len*k);
-                int ret = rdma_post_read(id[i], NULL, (char *)mr_base[i] + read_base+msg_len*k, msg_len, NULL, 0, msg_len *k, 0);
+                int ret = rdma_post_read(id[i], NULL, (char *)mr_base[i] + read_base+msg_len*k, 
+                                        msg_len, NULL, 0, msg_len *k, 0);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
