@@ -43,6 +43,9 @@ int rdma_create_id(struct rdma_event_channel *channel,
     id_priv->channel = channel;
     id_priv->context = context;
     id_priv->ps = ps;
+    id_priv->send_cq_channel = calloc(sizeof(struct ibv_comp_channel), 1);
+    id_priv->recv_cq_channel = calloc(sizeof(struct ibv_comp_channel), 1);
+    id_priv->mr = calloc(sizeof(struct ibv_mr), 1);
 
     // Actually, this implementation isn't RC.
     id_priv->qp_type = IBV_QPT_UC;
@@ -73,6 +76,8 @@ int rdma_destroy_id(struct rdma_cm_id *id)
         free(id->srq);
     if (id->pd)
         free(id->pd);
+    if (id->mr)
+        free(id->mr);
     return 0;
 }
 int rdma_bind_addr(struct rdma_cm_id *id, struct sockaddr *addr)
