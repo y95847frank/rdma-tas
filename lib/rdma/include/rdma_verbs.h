@@ -140,6 +140,7 @@ struct rdma_cm_id {
 	enum ibv_qp_type	qp_type;
 	//add ibv_mr 
 	struct ibv_mr *mr;
+	uint32_t op_id;
 };
 
 enum {
@@ -465,6 +466,8 @@ int rdma_establish(struct rdma_cm_id *id);
  *   rdma_bind_addr, rdma_connect, rdma_accept, rdma_reject, rdma_get_cm_event
  */
 int rdma_listen(struct rdma_cm_id *id, int backlog);
+
+int rdma_get_request (struct rdma_cm_id *listen, struct rdma_cm_id **id);
 
 /**
  * rdma_accept - Called to accept a connection request.

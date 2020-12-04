@@ -8,6 +8,7 @@
 #include "internal.h"
 #include "include/rdma_verbs.h"
 
+static int init = 0;
 struct rdma_event_channel *rdma_create_event_channel(void)
 {
     struct rdma_event_channel *ec;
@@ -25,10 +26,13 @@ int rdma_create_id(struct rdma_event_channel *channel,
                    struct rdma_cm_id **id, void *context,
                    enum rdma_port_space ps)
 {
-    if (!rdma_init())
-    {
-        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
-        return -1;
+    if(!init){
+        if (rdma_init() == -1)
+        {
+            fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+            return -1;
+        }
+        init = 1;
     }
     struct rdma_cm_id *id_priv = calloc(1, sizeof(struct rdma_cm_id));
     if (id_priv == NULL)
@@ -97,8 +101,7 @@ int rdma_resolve_addr(struct rdma_cm_id *id, struct sockaddr *src_addr,
     return 1;
 }
 int rdma_connect(struct rdma_cm_id *id, struct rdma_conn_param *conn_param){
-    // Do nothing
-    return 0;
+    return rdma_establish(id);
 }
 
 
@@ -137,15 +140,24 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
 
 int rdma_accept(struct rdma_cm_id *id, struct rdma_conn_param *conn_param){
 
+    // Do nothing here
+    return 0;
+}
+
+int rdma_get_request (struct rdma_cm_id *listen, struct rdma_cm_id **id){
     // Call rdma_accept here
-    int fd =  rdma_tas_accept(id->recv_cq_channel->fd, &id->route.addr.dst_sin , &id->mr->addr, &id->mr->length);
+    if (id == NULL){
+        struct rdma_event_channel * ec = rdma_create_event_channel();
+        rdma_create_id(ec, id, NULL, listen->ps);
+    }
+    int fd =  rdma_tas_accept(listen->recv_cq_channel->fd, &(*id)->route.addr.dst_sin , &(*id)->mr->addr, &(*id)->mr->length);
 
     // after we got fd from connect/accept, store it to id->send_cq_channel->fd
     if(fd){
-        id->send_cq_channel->fd = fd;
+        (*id)->send_cq_channel->fd = fd;
         return 0;
     }
-    else return -1;
+    else return -1;    
 }
 
 int rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
