@@ -416,12 +416,65 @@ int rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
     }
     memcpy((void*)id->mr->addr, addr, length);
 
-    int ret = rdma_write(id->send_cq_channel->fd, length, 0, remote_addr);
-    if(ret == -1){
+    //int ret = rdma_write(id->send_cq_channel->fd, length, 0, remote_addr);
+    //rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
+    uint32_t loffset = 0;
+    // 1. Find listener socket
+    if (id->send_cq_channel->fd < 1 || id->send_cq_channel->fd >= MAX_FD_NUM)
+    {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
-    }    
-    id->op_id = ret;
+    }
+    struct rdma_socket* s = fdmap[id->send_cq_channel->fd];
+    if (s->type != RDMA_CONN_SOCKET)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+    struct flextcp_connection* c = &s->c;
+
+    // 2. Validate address in memory region
+    if (((uint64_t) loffset + length) > c->mr_len)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 3. Acquire Work Queue Entry
+    // NOTE: c->wq_len must be a multiple of sizeof(struct rdma_wqe)
+    if (c->wq_len + c->cq_len == c->wq_size){
+        // Queue full!
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+	uint32_t wq_head = (c->wq_tail + c->wq_len) % c->wq_size;
+    struct rdma_wqe* wqe_pos = (struct rdma_wqe*)(c->wq_base + wq_head);
+
+    // 4. Fill entries of Work Queue
+    int32_t wid;
+    wid = wqe_pos->id = (c->wq_tail + c->wq_len) % c->wq_size;
+    wqe_pos->type = RDMA_OP_WRITE;
+    wqe_pos->status = RDMA_PENDING;
+    wqe_pos->loff = loffset;
+    wqe_pos->roff = remote_addr;
+    wqe_pos->len = length;
+
+    // 5. Increment Queue length
+	uint32_t old_len = c->wq_len;
+    MEM_BARRIER();
+	c->wq_len += sizeof(struct rdma_wqe);
+
+    // TODO: Handle the case where bump queue is full
+    // 6. Bump the fast path
+    if (rdma_conn_bump(appctx, c) < 0) {
+        // Undo the length increment (effectively revert adding wqe)
+		c->wq_len = old_len;
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    id->op_id = wid;
     return 0;
 
 }
@@ -432,13 +485,64 @@ int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
     // similarly with write
     // fd we use id->send_cq_channel->fd
 
-    int ret = rdma_read(id->send_cq_channel->fd, length, 0, remote_addr);
-
-    if(ret == -1){
+    //int ret = rdma_read(id->send_cq_channel->fd, length, 0, remote_addr);
+    //rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
+    uint32_t loffset = 0;
+    // 1. Find listener socket
+    if (id->send_cq_channel->fd < 1 || id->send_cq_channel->fd >= MAX_FD_NUM)
+    {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    id->op_id = ret;
+    struct rdma_socket* s = fdmap[id->send_cq_channel->fd];
+    if (s->type != RDMA_CONN_SOCKET)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+    struct flextcp_connection* c = &s->c;
+
+    // 2. Validate address in memory region
+    if (((uint64_t) loffset + length) > c->mr_len)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 3. Acquire Work Queue Entry
+	  // NOTE: c->wq_len must be a multiple of sizeof(struct rdma_wqe)
+    if (c->wq_len + c->cq_len == c->wq_size){
+        // Queue full!
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+	uint32_t wq_head = (c->wq_tail + c->wq_len) % c->wq_size;
+    struct rdma_wqe* wqe_pos = (struct rdma_wqe*)(c->wq_base + wq_head);
+
+    // 4. Fill entries of Work Queue
+    int32_t wid;
+    wid = wqe_pos->id = (c->wq_tail + c->wq_len) % c->wq_size;
+    wqe_pos->type = RDMA_OP_READ;
+    wqe_pos->status = RDMA_PENDING;
+    wqe_pos->loff = loffset;
+    wqe_pos->roff = remote_addr;
+    wqe_pos->len = length;
+
+    // 5. Increment Queue length
+	uint32_t old_len = c->wq_len;
+    MEM_BARRIER();
+	c->wq_len += sizeof(struct rdma_wqe);
+
+    // TODO: Handle the case where bump queue is full
+    // 6. Bump the fast path
+    if (rdma_conn_bump(appctx, c) < 0) {
+        // Undo the length increment (effectively revert adding wqe)
+		c->wq_len = old_len;
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    id->op_id = wid;
     memcpy(addr, id->mr->addr, length);
     return 0;
 }
