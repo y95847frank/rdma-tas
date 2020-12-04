@@ -94,7 +94,7 @@ int rdma_resolve_addr(struct rdma_cm_id *id, struct sockaddr *src_addr,
     }
 
     memcpy(&id->route.addr.dst_addr, dst_addr, sizeof(struct sockaddr));
-    return 1;
+    return 0;
 }
 int rdma_connect(struct rdma_cm_id *id, struct rdma_conn_param *conn_param){
     return rdma_establish(id);
@@ -142,7 +142,7 @@ int rdma_accept(struct rdma_cm_id *id, struct rdma_conn_param *conn_param){
 
 int rdma_get_request (struct rdma_cm_id *listen, struct rdma_cm_id **id){
     // Call rdma_accept here
-    if (id == NULL){
+    if (*id == NULL){
         struct rdma_event_channel * ec = rdma_create_event_channel();
         rdma_create_id(ec, id, NULL, listen->ps);
     }
