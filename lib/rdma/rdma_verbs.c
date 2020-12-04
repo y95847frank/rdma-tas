@@ -8,6 +8,9 @@
 #include "internal.h"
 #include "include/rdma_verbs.h"
 
+struct rdma_socket* fdmap[MAX_FD_NUM];
+struct flextcp_context* appctx = NULL;
+
 static int init = 0;
 struct rdma_event_channel *rdma_create_event_channel(void)
 {
@@ -223,6 +226,76 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
     // Call rdma_listen here
     struct sockaddr_in *localaddr = &id->route.addr.src_sin;
     int lfd = rdma_tas_listen(localaddr, backlog);
+    //rdma_tas_listen(const struct sockaddr_in* localaddr, int backlog)
+    if (localaddr == NULL || localaddr->sin_family != AF_INET)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 2. Allocate FD and Socket
+    int fd = fd_alloc();
+    if (fd == -1)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+    struct rdma_socket* s = calloc(1, sizeof(struct rdma_socket));
+    if (s == NULL)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 3. Set backlog to a valid range
+    if (backlog < LISTEN_BACKLOG_MIN)
+        backlog = LISTEN_BACKLOG_MIN;
+    if (backlog > LISTEN_BACKLOG_MAX)
+        backlog = LISTEN_BACKLOG_MAX;
+
+    // 4. listen() IPC to TAS Slowpath
+    if (flextcp_listen_open(appctx, &s->l,
+            ntohs(localaddr->sin_port), backlog, 0) != 0)
+    {
+        free(s);
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 5. Block until TAS Slowpath processes the request
+    struct flextcp_event ev;
+    int ret;
+    memset(&ev, 0, sizeof(struct flextcp_event));
+    while (1)
+    {
+	// TODO: Only poll the kernel
+        ret = flextcp_context_poll(appctx, 1, &ev);
+        if (ret < 0)
+        {
+            free(s);
+            fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+            return -1;
+        }
+
+        if (ret == 1)
+            break;
+
+        flextcp_block(appctx, CONTROL_TIMEOUT);
+    }
+
+    // 6. Check listen() status
+    if (ev.event_type != FLEXTCP_EV_LISTEN_OPEN ||
+        ev.ev.listen_open.listener != &s->l ||
+        ev.ev.listen_open.status != 0)
+    {
+        free(s);
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 7. Store rdma_socket in fdmap
+    s->type = RDMA_LISTEN_SOCKET;
+    fdmap[fd] = s;
 
     // after we got fd from listen, store it to id->recv_cq_channel->fd
      if(lfd){

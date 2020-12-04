@@ -43,6 +43,8 @@
 extern "C" {
 #endif
 
+#define MAX_FD_NUM  (1 << 16)
+
 // rdma_cma.h
 
 /*
