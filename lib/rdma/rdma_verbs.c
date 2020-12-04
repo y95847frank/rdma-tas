@@ -111,11 +111,11 @@ int rdma_establish(struct rdma_cm_id *id){
     int fd = rdma_tas_connect(remoteaddr,&id->mr->addr,(uint32_t*)&id->mr->length);
 
     // after we got fd from connect/accept, store it to id->send_cq_channel->fd
-    if(fd){
-        id->send_cq_channel->fd = fd;
-        return 0;
+    if(fd < 0){
+        return -1;
     }
-    else return -1;
+    id->send_cq_channel->fd = fd;
+    return 0;
     
 }
 
