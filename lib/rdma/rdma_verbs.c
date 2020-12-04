@@ -234,8 +234,8 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
     }
 
     // 2. Allocate FD and Socket
-    int fd = fd_alloc();
-    if (fd == -1)
+    int lfd = fd_alloc();
+    if (lfd == -1)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
@@ -295,7 +295,7 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
 
     // 7. Store rdma_socket in fdmap
     s->type = RDMA_LISTEN_SOCKET;
-    fdmaps[fd] = s;
+    fdmaps[lfd] = s;
 
     // after we got fd from listen, store it to id->recv_cq_channel->fd
      if(lfd){
