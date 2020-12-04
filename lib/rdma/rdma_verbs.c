@@ -8,8 +8,8 @@
 #include "internal.h"
 #include "include/rdma_verbs.h"
 
-struct rdma_socket* fdmap[MAX_FD_NUM];
-struct flextcp_context* appctx = NULL;
+struct rdma_socket* fdmaps[MAX_FD_NUM];
+struct flextcp_context* appctxs = NULL;
 
 static int init = 0;
 struct rdma_event_channel *rdma_create_event_channel(void)
@@ -225,7 +225,7 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
 
     // Call rdma_listen here
     struct sockaddr_in *localaddr = &id->route.addr.src_sin;
-    int lfd = rdma_tas_listen(localaddr, backlog);
+    //int lfd = rdma_tas_listen(localaddr, backlog);
     //rdma_tas_listen(const struct sockaddr_in* localaddr, int backlog)
     if (localaddr == NULL || localaddr->sin_family != AF_INET)
     {
@@ -269,7 +269,7 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
     while (1)
     {
 	// TODO: Only poll the kernel
-        ret = flextcp_context_poll(appctx, 1, &ev);
+        ret = flextcp_context_poll(appctxs, 1, &ev);
         if (ret < 0)
         {
             free(s);
@@ -280,7 +280,7 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
         if (ret == 1)
             break;
 
-        flextcp_block(appctx, CONTROL_TIMEOUT);
+        flextcp_block(appctxs, CONTROL_TIMEOUT);
     }
 
     // 6. Check listen() status
@@ -295,7 +295,7 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
 
     // 7. Store rdma_socket in fdmap
     s->type = RDMA_LISTEN_SOCKET;
-    fdmap[fd] = s;
+    fdmaps[fd] = s;
 
     // after we got fd from listen, store it to id->recv_cq_channel->fd
      if(lfd){
