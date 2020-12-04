@@ -8,8 +8,8 @@
 #include "internal.h"
 #include "include/rdma_verbs.h"
 
-//struct rdma_socket* fdmap[MAX_FD_NUM];
-//struct flextcp_context* appctx = NULL;
+struct rdma_socket* fdmap[MAX_FD_NUM];
+struct flextcp_context* appctx = NULL;
 
 static int init = 0;
 struct rdma_event_channel *rdma_create_event_channel(void)
