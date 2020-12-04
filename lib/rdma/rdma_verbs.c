@@ -8,8 +8,8 @@
 #include "internal.h"
 #include "include/rdma_verbs.h"
 
-struct rdma_socket* fdmaps[MAX_FD_NUM];
-struct flextcp_context* appctxs = NULL;
+struct rdma_socket* fdmap[MAX_FD_NUM];
+struct flextcp_context* appctx = NULL;
 
 static int init = 0;
 struct rdma_event_channel *rdma_create_event_channel(void)
@@ -234,8 +234,8 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
     }
 
     // 2. Allocate FD and Socket
-    int lfd = fd_alloc();
-    if (lfd == -1)
+    int fd = fd_alloc();
+    if (fd == -1)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
@@ -269,7 +269,7 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
     while (1)
     {
 	// TODO: Only poll the kernel
-        ret = flextcp_context_poll(appctxs, 1, &ev);
+        ret = flextcp_context_poll(appctx, 1, &ev);
         if (ret < 0)
         {
             free(s);
@@ -280,7 +280,7 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
         if (ret == 1)
             break;
 
-        flextcp_block(appctxs, CONTROL_TIMEOUT);
+        flextcp_block(appctx, CONTROL_TIMEOUT);
     }
 
     // 6. Check listen() status
@@ -295,11 +295,11 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
 
     // 7. Store rdma_socket in fdmap
     s->type = RDMA_LISTEN_SOCKET;
-    fdmaps[lfd] = s;
+    fdmap[fd] = s;
 
     // after we got fd from listen, store it to id->recv_cq_channel->fd
-     if(lfd){
-        id->recv_cq_channel->fd = lfd;
+     if(fd){
+        id->recv_cq_channel->fd = fd;
         return 0;
     }
     else return -1;
