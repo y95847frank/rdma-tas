@@ -27,11 +27,28 @@ int rdma_create_id(struct rdma_event_channel *channel,
                    enum rdma_port_space ps)
 {
     if(!init){
-        if (rdma_init() == -1)
+        // 1. Connect with TAS
+        if (flextcp_init() != 0)
         {
             fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
             return -1;
         }
+
+        // 2. Register app context with TAS
+        appctx = calloc(1, sizeof(struct flextcp_context));
+        if (appctx == NULL)
+        {
+            fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+            return -1;
+        }
+        if (flextcp_context_create(appctx) != 0)
+        {
+            fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+            return -1;
+        }
+
+        // 3. Initialize internal datastructures
+        memset(fdmap, 0, sizeof(fdmap));
         init = 1;
     }
     struct rdma_cm_id *id_priv = calloc(1, sizeof(struct rdma_cm_id));
@@ -80,11 +97,13 @@ int rdma_destroy_id(struct rdma_cm_id *id)
         free(id->mr);
     return 0;
 }
+
 int rdma_bind_addr(struct rdma_cm_id *id, struct sockaddr *addr)
 {
     memcpy((void*)&id->route.addr.src_addr, addr, sizeof(struct sockaddr));
     return 0;
 }
+
 int rdma_resolve_addr(struct rdma_cm_id *id, struct sockaddr *src_addr,
                       struct sockaddr *dst_addr, int timeout_ms)
 {
@@ -96,19 +115,99 @@ int rdma_resolve_addr(struct rdma_cm_id *id, struct sockaddr *src_addr,
     memcpy(&id->route.addr.dst_addr, dst_addr, sizeof(struct sockaddr));
     return 0;
 }
+
 int rdma_connect(struct rdma_cm_id *id, struct rdma_conn_param *conn_param){
     return rdma_establish(id);
 }
 
+static int fd_alloc(void)
+{
+    int i;
+    // Skip 0 to avoid possible confusion
+    for (i = 1; i < MAX_FD_NUM; i++)
+        if (fdmap[i] == NULL)
+            break;
 
+    if (i == MAX_FD_NUM)
+        return -1;
+
+    return i;
+}
 
 int rdma_establish(struct rdma_cm_id *id){
 
     // Call rdma_connect
     struct sockaddr_in *remoteaddr =  &id->route.addr.dst_sin;
     
-    // add mr to rdma_cm_id, because rdma_tas_connect does the work of mem reg?? 
-    int fd = rdma_tas_connect(remoteaddr,&id->mr->addr,(uint32_t*)&id->mr->length);
+    //int fd = rdma_tas_connect(remoteaddr,&id->mr->addr,(uint32_t*)&id->mr->length);
+    // add mr to rdma_cm_id, because rdma_tas_connect does the work of mem reg??
+    if (remoteaddr == NULL || remoteaddr->sin_family != AF_INET)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 2. Allocate FD and Socket
+    int fd = fd_alloc();
+    if (fd == -1)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+    struct rdma_socket* s = calloc(1, sizeof(struct rdma_socket));
+    if (s == NULL)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 3. connect() IPC to TAS Slowpath
+    if (flextcp_connection_open(appctx, &s->c,
+        ntohl(remoteaddr->sin_addr.s_addr), ntohs(remoteaddr->sin_port)) != 0)
+    {
+        free(s);
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 4. Block until TAS Slowpath processes the request
+    struct flextcp_event ev;
+    int ret;
+    memset(&ev, 0, sizeof(struct flextcp_event));
+    while (1)
+    {
+	// TODO: Only poll the kernel
+        ret = flextcp_context_poll(appctx, 1, &ev);
+        if (ret < 0)
+        {
+            free(s);
+            fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+            return -1;
+        }
+
+        if (ret == 1)
+            break;
+
+        flextcp_block(appctx, CONTROL_TIMEOUT);
+    }
+
+    // 5. Check accept() status
+    if (ev.event_type != FLEXTCP_EV_CONN_OPEN ||
+        ev.ev.conn_open.conn != &s->c ||
+        ev.ev.conn_open.status != 0)
+    {
+        free(s);
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 6. Store rdma_socket in fdmap
+    s->type = RDMA_CONN_SOCKET;
+    fdmap[fd] = s;
+
+    // 7. Update return parameters
+    id->mr->addr = s->c.mr;
+    id->mr->length = s->c.mr_len;
 
     // after we got fd from connect/accept, store it to id->send_cq_channel->fd
     if(fd < 0){
