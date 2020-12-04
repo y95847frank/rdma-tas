@@ -546,3 +546,44 @@ int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
     memcpy(addr, id->mr->addr, length);
     return 0;
 }
+
+int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
+    int ret;
+    if (fd < 1 || fd >= MAX_FD_NUM)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+    struct rdma_socket* s = fdmap[fd];
+    if (s->type != RDMA_CONN_SOCKET)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+    struct flextcp_connection* c = &s->c;
+    if (c->cq_len < num * sizeof(struct rdma_wqe))
+    {
+        ret = rdma_fastpath_poll(appctx, c, num * sizeof(struct rdma_wqe));
+        if (ret < 0){
+            fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+            return -1;
+        }
+    }
+
+    int i = 0;
+    struct rdma_wqe* wqe;
+    struct rdma_wqe* ev;
+    while(c->cq_len > 0 && i < num){
+        wqe = (struct rdma_wqe*)(c->wq_base + c->cq_tail);
+        ev = compl_evs + i;
+
+        // Copy the wqe data
+        memcpy(ev, wqe, sizeof(struct rdma_wqe));
+
+        // Update queue pointers and length
+        c->cq_tail = (c->cq_tail + sizeof(struct rdma_wqe)) % c->wq_size;
+        c->cq_len -= sizeof(struct rdma_wqe);
+        i += 1;
+    }
+    return i;
+}
