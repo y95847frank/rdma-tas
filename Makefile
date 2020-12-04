@@ -39,7 +39,7 @@ STACK_OBJS = $(addprefix lib/tas/,init.o kernel.o conn.o connect.o)
 SOCKETS_OBJS = $(addprefix lib/sockets/,control.o transfer.o context.o manage_fd.o \
 	epoll.o libc.o)
 INTERPOSE_OBJS = $(addprefix lib/sockets/,interpose.o)
-RDMA_OBJS = $(addprefix lib/rdma/,control.o dataops.o)
+RDMA_OBJS = $(addprefix lib/rdma/,control.o dataops.o rdma_verbs.o)
 
 CFLAGS += -I. -Ilib/tas/include -Ilib/rdma/include
 
@@ -67,6 +67,8 @@ TESTS= \
 TESTS_PING= \
 	tests/rdma_client_ping \
 	tests/rdma_server_pong \
+	tests/rdma_client_ping_new \
+	tests/rdma_server_pong_new \
 
 all: lib/libtas_rdma.so lib/libtas.so \
 	tools/tracetool tools/statetool tools/scaletool \
@@ -105,6 +107,8 @@ tests/rdma_multi_server: tests/rdma_multi_server.o lib/libtas_rdma.so lib/libtas
 tests/rdma_multi_client_read: tests/rdma_multi_client_read.o lib/libtas_rdma.so lib/libtas.so
 tests/rdma_client_ping: tests/rdma_client_ping.o lib/libtas_rdma.so lib/libtas.so
 tests/rdma_server_pong: tests/rdma_server_pong.o lib/libtas_rdma.so lib/libtas.so
+tests/rdma_client_ping_new: tests/rdma_client_ping_new.o lib/libtas_rdma.so lib/libtas.so
+tests/rdma_server_pong_new: tests/rdma_server_pong_new.o lib/libtas_rdma.so lib/libtas.so
 
 tests/libtas/tas_ll: tests/libtas/tas_ll.o tests/libtas/harness.o \
 	tests/libtas/harness.o tests/testutils.o lib/libtas.so
