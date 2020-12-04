@@ -52,6 +52,12 @@ TESTS_AUTO= \
 TESTS_AUTO_FULL= \
 	tests/full/tas_linux \
 
+TESTS_PING= \
+	tests/rdma_client_ping \
+	tests/rdma_server_pong \
+	tests/rdma_client_ping_new \
+	tests/rdma_server_pong_new
+
 TESTS= \
 	tests/lowlevel \
 	tests/lowlevel_echo \
@@ -62,13 +68,9 @@ TESTS= \
 	tests/rdma_multi_client \
 	tests/rdma_multi_client_read \
 	$(TESTS_AUTO) \
-	$(TESTS_AUTO_FULL)
+	$(TESTS_AUTO_FULL)\
+	$(TESTS_PING)
 
-TESTS_PING= \
-	tests/rdma_client_ping \
-	tests/rdma_server_pong \
-	tests/rdma_client_ping_new \
-	tests/rdma_server_pong_new \
 
 all: lib/libtas_rdma.so lib/libtas.so \
 	tools/tracetool tools/statetool tools/scaletool \

@@ -27,12 +27,12 @@ int main(int argc, char* argv[])
     struct rdma_cm_id * listen_id;
     rdma_create_id(ec, &listen_id, NULL, RDMA_PS_TCP);
 
-    struct sockaddr_in localaddr, remoteaddr;
+    struct sockaddr_in localaddr;
     localaddr.sin_family = AF_INET;
     localaddr.sin_addr.s_addr = inet_addr(ip);
     localaddr.sin_port = htons(port);
 
-    int ret = rdma_bind_addr(id, (struct sockaddr *)&localaddr);
+    int ret = rdma_bind_addr(listen_id, (struct sockaddr *)&localaddr);
     if(ret < 0){
             fprintf(stderr, "Bind failed\n");
             return -1;       

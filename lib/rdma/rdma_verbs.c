@@ -73,28 +73,19 @@ int rdma_destroy_id(struct rdma_cm_id *id)
         free(id->srq);
     if (id->pd)
         free(id->pd);
+    return 0;
 }
 int rdma_bind_addr(struct rdma_cm_id *id, struct sockaddr *addr)
 {
-    int ret = memcpy(&id->route.addr.src_addr, addr, sizeof(struct sockaddr));
-    if (ret < 0)
-    {
-        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
-        return -1;
-    }
-    return ret;
+    memcpy((void*)&id->route.addr.src_addr, addr, sizeof(struct sockaddr));
+    return 0;
 }
 int rdma_resolve_addr(struct rdma_cm_id *id, struct sockaddr *src_addr,
                       struct sockaddr *dst_addr, int timeout_ms)
 {
     if (src_addr != NULL)
     {
-        int ret = memcpy(&id->route.addr.src_addr, src_addr, sizeof(struct sockaddr));
-        if (ret < 0)
-        {
-            fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
-            return -1;
-        }
+        memcpy((void*)&id->route.addr.src_addr, src_addr, sizeof(struct sockaddr));
     }
 
     memcpy(&id->route.addr.dst_addr, dst_addr, sizeof(struct sockaddr));
@@ -112,7 +103,7 @@ int rdma_establish(struct rdma_cm_id *id){
     struct sockaddr_in *remoteaddr =  &id->route.addr.dst_sin;
     
     // add mr to rdma_cm_id, because rdma_tas_connect does the work of mem reg?? 
-    int fd = rdma_tas_connect(&remoteaddr,&id->mr->addr,&id->mr->length);
+    int fd = rdma_tas_connect(remoteaddr,&id->mr->addr,(uint32_t*)&id->mr->length);
 
     // after we got fd from connect/accept, store it to id->send_cq_channel->fd
     if(fd){
@@ -127,7 +118,7 @@ int rdma_listen(struct rdma_cm_id *id, int backlog){
 
     // Call rdma_listen here
     struct sockaddr_in *localaddr = &id->route.addr.src_sin;
-    int lfd = rdma_tas_listen(&localaddr, backlog);
+    int lfd = rdma_tas_listen(localaddr, backlog);
 
     // after we got fd from listen, store it to id->recv_cq_channel->fd
      if(lfd){
@@ -150,7 +141,7 @@ int rdma_get_request (struct rdma_cm_id *listen, struct rdma_cm_id **id){
         struct rdma_event_channel * ec = rdma_create_event_channel();
         rdma_create_id(ec, id, NULL, listen->ps);
     }
-    int fd =  rdma_tas_accept(listen->recv_cq_channel->fd, &(*id)->route.addr.dst_sin , &(*id)->mr->addr, &(*id)->mr->length);
+    int fd =  rdma_tas_accept(listen->recv_cq_channel->fd, &(*id)->route.addr.dst_sin , &(*id)->mr->addr, (uint32_t *)&(*id)->mr->length);
 
     // after we got fd from connect/accept, store it to id->send_cq_channel->fd
     if(fd){
@@ -178,7 +169,7 @@ int rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;        
     }
-    memcpy(id->mr->addr, addr, length);
+    memcpy((void*)id->mr->addr, addr, length);
 
     int ret = rdma_write(id->send_cq_channel->fd, length, 0, remote_addr);
     if(ret == -1){

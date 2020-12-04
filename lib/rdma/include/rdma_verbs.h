@@ -606,6 +606,7 @@ void rdma_destroy_srq(struct rdma_cm_id *id);
 /*
  * Memory registration helpers.
  */
+/*
 static inline struct ibv_mr *
 rdma_reg_msgs(struct rdma_cm_id *id, void *addr, size_t length)
 {
@@ -631,12 +632,14 @@ rdma_dereg_mr(struct ibv_mr *mr)
 {
 	return rdma_seterrno(ibv_dereg_mr(mr));
 }
+*/
 
 
 /*
  * Vectored send, receive, and RDMA operations.
  * Support multiple scatter-gather entries.
  */
+/*
 static inline int
 rdma_post_recvv(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
 		int nsge)
@@ -653,6 +656,7 @@ rdma_post_recvv(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
 	else
 		return rdma_seterrno(ibv_post_recv(id->qp, &wr, &bad));
 }
+*/
 
 // static inline int
 // rdma_post_sendv(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
@@ -709,6 +713,7 @@ rdma_post_recvv(struct rdma_cm_id *id, void *context, struct ibv_sge *sgl,
 /*
  * Simple send, receive, and RDMA calls.
  */
+/*
 static inline int
 rdma_post_recv(struct rdma_cm_id *id, void *context, void *addr,
 	       size_t length, struct ibv_mr *mr)
@@ -736,6 +741,7 @@ rdma_post_send(struct rdma_cm_id *id, void *context, void *addr,
 
 	return rdma_post_sendv(id, context, &sge, 1, flags);
 }
+*/
 
 int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
 	       size_t length, struct ibv_mr *mr, int flags,

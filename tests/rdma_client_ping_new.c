@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
     id = calloc(NUM_CONNECTIONS, sizeof(struct rdma_cm_id*));
     for (int i = 0; i < num_conns; i++)
     {
-        struct rdma_event_channel *ec = rdma_event_channel();
+        struct rdma_event_channel *ec = rdma_create_event_channel();
         int ret = rdma_create_id(ec, &id[i], NULL, RDMA_PS_TCP);
         if (ret < 0)
         {
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "Resolve address failed\n");
                 return -1;       
         }
-        ret = rdma_connect(id, NULL);
+        ret = rdma_connect(id[i], NULL);
         if (ret < 0)
         {
             fprintf(stderr, "Connection failed\n");
