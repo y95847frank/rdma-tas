@@ -318,8 +318,76 @@ int rdma_get_request (struct rdma_cm_id *listen, struct rdma_cm_id **id){
         struct rdma_event_channel * ec = rdma_create_event_channel();
         rdma_create_id(ec, id, NULL, listen->ps);
     }
-    int fd =  rdma_tas_accept(listen->recv_cq_channel->fd, &(*id)->route.addr.dst_sin , &(*id)->mr->addr, (uint32_t *)&(*id)->mr->length);
+    //int fd =  rdma_tas_accept(listen->recv_cq_channel->fd, &(*id)->route.addr.dst_sin , &(*id)->mr->addr, (uint32_t *)&(*id)->mr->length);
+    //rdma_tas_accept(int listenfd, struct sockaddr_in* remoteaddr,
+	//	void **mr_base, uint32_t *mr_len)
+    if (listen->recv_cq_channel->fd < 1 || listen->recv_cq_channel->fd >= MAX_FD_NUM)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+    struct rdma_socket* ls = fdmap[listen->recv_cq_channel->fd];
 
+    // 2. Allocate FD and Socket
+    int fd = fd_alloc();
+    if (fd == -1)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+    struct rdma_socket* s = calloc(1, sizeof(struct rdma_socket));
+    if (s == NULL)
+    {
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 3. accept() IPC to TAS Slowpath
+    if (flextcp_listen_accept(appctx, &ls->l, &s->c) != 0)
+    {
+        free(s);
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 4. Block until TAS Slowpath processes the request
+    struct flextcp_event ev;
+    int ret;
+    memset(&ev, 0, sizeof(struct flextcp_event));
+    while (1)
+    {
+	// TODO: Only poll the kernel
+        ret = flextcp_context_poll(appctx, 1, &ev);
+        if (ret < 0)
+        {
+            free(s);
+            fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+            return -1;
+        }
+
+        if (ret == 1)
+            break;
+
+        flextcp_block(appctx, CONTROL_TIMEOUT);
+    }
+
+    // 5. Check accept() status
+    if (ev.event_type != FLEXTCP_EV_LISTEN_ACCEPT ||
+        ev.ev.listen_accept.conn != &s->c ||
+        ev.ev.listen_accept.status != 0)
+    {
+        free(s);
+        fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
+        return -1;
+    }
+
+    // 6. Store socket in fdmap
+    s->type = RDMA_CONN_SOCKET;
+    fdmap[fd] = s;
+
+    // 7. Update return parameters
+    (*id)->mr->addr = s->c.mr;
+    (*id)->mr->length = s->c.mr_len;
     // after we got fd from connect/accept, store it to id->send_cq_channel->fd
     if(fd){
         (*id)->send_cq_channel->fd = fd;
