@@ -414,11 +414,11 @@ int rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;        
     }
-    memcpy((void*)id->mr->addr, addr, length);
+    // memcpy((void*)id->mr->addr, addr, length);
 
     //int ret = rdma_write(id->send_cq_channel->fd, length, 0, remote_addr);
     //rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
-    uint32_t loffset = 0;
+    uint32_t loffset = *(char *)addr;
     // 1. Find listener socket
     if (id->send_cq_channel->fd < 1 || id->send_cq_channel->fd >= MAX_FD_NUM)
     {
@@ -487,7 +487,7 @@ int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
 
     //int ret = rdma_read(id->send_cq_channel->fd, length, 0, remote_addr);
     //rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
-    uint32_t loffset = 0;
+    uint32_t loffset = *(char *)addr;
     // 1. Find listener socket
     if (id->send_cq_channel->fd < 1 || id->send_cq_channel->fd >= MAX_FD_NUM)
     {
@@ -543,7 +543,7 @@ int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
     }
 
     id->op_id = wid;
-    memcpy(addr, id->mr->addr, length);
+    // memcpy(addr, id->mr->addr, length);
     return 0;
 }
 
