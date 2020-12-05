@@ -113,6 +113,7 @@ int main(int argc, char* argv[])
     count[0] = pending_msgs;
     for (int i = 0; i < num_conns; i++)
     {
+        memcpy(mr_base[i], mr_base[0], mr_len[0]);
         memcpy(id[i]->mr->addr, mr_base[0], mr_len[0]);
         count[i] = pending_msgs;
     }
