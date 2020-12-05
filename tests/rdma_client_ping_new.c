@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
                 else {
                     printf("Finished Write!\n");
                 }
-                printf("Current mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)mr_base[i]);
+                printf("Current mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)id[i]->mr->addr);
                 stopCount += 1;
                 if (stopCount > 5) {
                     return -1;
