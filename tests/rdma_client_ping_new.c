@@ -109,11 +109,11 @@ int main(int argc, char* argv[])
         c++;
     }
     printf("mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)mr_base[0]);
-
+    
     count[0] = pending_msgs;
-    for (int i = 1; i < num_conns; i++)
+    for (int i = 0; i < num_conns; i++)
     {
-        memcpy(mr_base[i], mr_base[0], mr_len[0]);
+        memcpy(id[i]->mr->addr, mr_base[0], mr_len[0]);
         count[i] = pending_msgs;
     }
     
@@ -163,7 +163,6 @@ int main(int argc, char* argv[])
                     rdma_reg_write();
                 */
                 //int ret = rdma_write(fd[i], msg_len, 0+msg_len*j, 0+msg_len*j);
-                memcpy(id[i]->mr->addr, mr_base[0], mr_len[0]);
                 uint32_t loff =  msg_len*j;
                 int ret = rdma_post_write(id[i], NULL, &loff, msg_len, NULL, 0, msg_len*j, 0);
                 if (ret < 0)
