@@ -139,17 +139,7 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
       wqe_pending_rx = wqe->len;
       rx_bump_len = MIN(wqe_pending_rx, rx_bump);
 
-      // Based on read: roff, loff???
       void* mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
-      /*
-      void* mr_ptr;
-      if(wqe->type == (RDMA_OP_READ)){
-        mr_ptr = dma_pointer(fs->mr_base + wqe->roff, rx_bump_len);
-      }
-      else {
-        mr_ptr = dma_pointer(fs->mr_base + wqe->loff, rx_bump_len);
-      }
-      */
 
       if (wqe->status == RDMA_PENDING)
         fast_rdma_rxbuf_copy(fs, rx_head, rx_bump_len, mr_ptr);
@@ -212,8 +202,6 @@ int fast_rdmarq_bump(struct dataplane_context* ctx,
            wqe->status = RDMA_PENDING;
         wqe->roff = f_beui32(hdr->loffset);
 
-        //fprintf(stderr,"wqe_id:%u\n",wqe->id);
-        
         uint8_t type = hdr->type;
         if ((type & RDMA_RESPONSE) == RDMA_RESPONSE)
         {
@@ -415,48 +403,6 @@ static inline int fast_rdmawqe_tx(struct flextcp_pl_flowst* fl,
     hdr.id = t_beui32(wqe->id);
     hdr.flags = t_beui16(0);
     hdr.loffset = t_beui32(wqe->loff);
-
-    // fprintf(stderr,"hdr_id:%u\n",wqe->id);
-    // //DEBUG
-    // uint8_t type = hdr.type;
-    // if ((type & RDMA_RESPONSE) == RDMA_RESPONSE)
-    //   {
-    //     if ((type & RDMA_READ) == RDMA_READ)
-    //     {
-    //         fprintf(stderr,"READ RESPONSE\n");
-    //     }
-    //     else if ((type & RDMA_WRITE) == RDMA_WRITE)
-    //     {
-    //          fprintf(stderr,"WRITE RESPONSE\n");
-    //     }
-    //     else
-    //     {
-    //         fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
-    //         abort();
-    //     }
-    //   }
-    //   else if ((type & RDMA_REQUEST) == RDMA_REQUEST)
-    //   {
-    //       if ((type & RDMA_READ) == RDMA_READ)
-    //       {
-    //          fprintf(stderr,"READ REQUEST\n");
-    //       }
-    //       else if ((type & RDMA_WRITE) == RDMA_WRITE)
-    //       { 
-    //          fprintf(stderr,"WRITE REQUEST\n");
-    //       }
-    //       else
-    //       {
-    //         fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
-    //         abort();
-    //       } 
-    //   }
-    //   else
-    //   {
-    //       fprintf(stderr, "%s():%d Invalid request type\n", __func__, __LINE__);
-    //       abort();
-    //   }
-    //   //DEBUG
 
     fast_rdma_txbuf_copy(fl, sizeof(struct rdma_hdr), &hdr);
 
