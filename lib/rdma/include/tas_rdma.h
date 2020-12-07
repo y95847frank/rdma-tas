@@ -30,19 +30,6 @@ enum rdma_op_status_e {
 };
 
 /**
- * RDMA Work/Completion Queue Entry
- */
-struct rdma_wqe {
-    uint32_t id;  /**> Operation ID returned in RDMA read()/write() call */
-    uint8_t type;
-    uint8_t status;
-    uint16_t flags;
-    uint32_t loff;  /**> Local offset */
-    uint32_t roff;  /**> Remote offset */
-    uint32_t len;
-} __attribute__((packed));
-
-/**
  * Initialize application library to communicate with TAS.
  * [1] Setup IPC mechanisms with TAS
  * [2] Reset the state
