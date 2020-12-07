@@ -20,9 +20,11 @@ struct rdma_socket{
 
 #define MAX_FD_NUM  (1 << 16)   // TODO: Should be configurable
 extern struct rdma_socket* fdmap[MAX_FD_NUM];
+extern struct rdma_socket* rdma_tas_fdmap[MAX_FD_NUM];
 
 /* TAS Application Context */
 extern struct flextcp_context* appctx;
+extern struct flextcp_context* rdma_tas_appctx;
 
 #define LISTEN_BACKLOG_MIN  8
 #define LISTEN_BACKLOG_MAX  1024
