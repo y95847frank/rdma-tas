@@ -25,7 +25,8 @@ int main()
     localaddr.sin_port = htons(5005);
 
     void *mr_base;
-    uint32_t mr_len;
+    uint32_t mr_len = 4;
+    mr_base = malloc(mr_len);
 
     int ret = rdma_bind_addr(listen_id, (struct sockaddr *)&localaddr);
     if(ret < 0){
