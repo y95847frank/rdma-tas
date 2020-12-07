@@ -15,7 +15,6 @@
 #define WQSIZE              1024
 
 struct rdma_cm_id ** id;
-int fd[NUM_CONNECTIONS];
 void* mr_base[NUM_CONNECTIONS];
 uint32_t mr_len[NUM_CONNECTIONS];
 int count[NUM_CONNECTIONS];
@@ -50,7 +49,6 @@ int main(int argc, char* argv[])
     assert(msg_len < MRSIZE);
     assert(pending_msgs < WQSIZE);
 
-    //rdma_tas_init();
     struct sockaddr_in remoteaddr;
     remoteaddr.sin_family = AF_INET;
     remoteaddr.sin_addr.s_addr = inet_addr(rip);
@@ -78,19 +76,6 @@ int main(int argc, char* argv[])
             return -1;
         }
     }
-
-    /*
-    for (int i = 0; i < num_conns; i++)
-    {
-        fd[i] = rdma_tas_connect(&remoteaddr, &mr_base[i], &mr_len[i]);
-
-        if (fd[i] < 0)
-        {
-            fprintf(stderr, "Connection failed\n");
-            return -1;
-        }
-    }
-    */
 
     fprintf(stderr, "Connections established: %d\n", num_conns);
     getchar();
