@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <tas_rdma.h>
 #include <rdma_verbs.h>

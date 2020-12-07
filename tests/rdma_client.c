@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <tas_rdma.h>
 #include <rdma_verbs.h>
@@ -19,7 +20,7 @@ int main()
   remoteaddr.sin_port = htons(5005);
 
   void *mr_base;
-  uint32_t mr_len;
+  //uint32_t mr_len;
 
   id = calloc(1, sizeof(struct rdma_cm_id*));
   struct rdma_event_channel *ec = rdma_create_event_channel();
@@ -30,7 +31,7 @@ int main()
       fprintf(stderr, "Connection failed\n");
       return -1;
   }
-  ret = rdma_resolve_addr(id[i], NULL, (struct sockaddr *)&remoteaddr, 1000);
+  ret = rdma_resolve_addr(id[0], NULL, (struct sockaddr *)&remoteaddr, 1000);
   if(ret < 0){
           fprintf(stderr, "Resolve address failed\n");
           return -1;       
