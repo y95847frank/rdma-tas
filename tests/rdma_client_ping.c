@@ -127,10 +127,17 @@ int main(int argc, char* argv[])
                     printf("Finished Write!\n");
                 }
                 printf("Current mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)mr_base[i]);
+                
                 stopCount += 1;
                 if (stopCount > 5) {
                     return -1;
                 }
+
+                if(write_flag){
+                    memcpy(id[i]->mr->addr, mr_base[i], mr_len[0]);
+                    printf("\nReset memory to start a new write, current mem: %.*s\n", read_base*4, (char*)id[i]->mr->addr);
+                }
+
             }
 
             count[i] += ret;
