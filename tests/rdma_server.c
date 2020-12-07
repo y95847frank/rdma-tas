@@ -27,7 +27,7 @@ int main()
     void *mr_base;
     uint32_t mr_len;
 
-    ret = rdma_bind_addr(listen_id, (struct sockaddr *)&localaddr);
+    int ret = rdma_bind_addr(listen_id, (struct sockaddr *)&localaddr);
     if(ret < 0){
             fprintf(stderr, "Bind failed\n");
             return -1;       
