@@ -401,23 +401,18 @@ int rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
 		uint64_t remote_addr, uint32_t rkey)
 {
     /* ignore flags, rkey
-       let context hold the return value (id) of rdma_write
        ignore mr because mr is now put into id
-       from doc: addr - The local address of the source of the write request. Let it hold loffset here?
+       from doc: addr - The local address of the source of the write request. But let it hold loffset here
        from doc: remote_addr - The address of the remote registered memory to write into.
-       But remote mem is always registered to the config value, so let remote_addr here hold roffset?
+       But remote mem is always registered to the config value, so let remote_addr here hold roffset
     */
 
-    // write addr to remote_addr
-    // addr -> copy -> mr->addr length -> length
     if(length > id->mr->length){
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;        
     }
-    // memcpy((void*)id->mr->addr, addr, length);
 
-    //int ret = rdma_write(id->send_cq_channel->fd, length, 0, remote_addr);
-    //rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
+    //int ret = rdma_write(id->send_cq_channel->fd, length, *addr, remote_addr);
     uint32_t loffset = *(char *)addr;
     // 1. Find listener socket
     if (id->send_cq_channel->fd < 1 || id->send_cq_channel->fd >= MAX_FD_NUM)
@@ -485,8 +480,7 @@ int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
     // similarly with write
     // fd we use id->send_cq_channel->fd
 
-    //int ret = rdma_read(id->send_cq_channel->fd, length, 0, remote_addr);
-    //rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
+    //int ret = rdma_read(id->send_cq_channel->fd, length, *addr, remote_addr);
     uint32_t loffset = *(char *)addr;
     // 1. Find listener socket
     if (id->send_cq_channel->fd < 1 || id->send_cq_channel->fd >= MAX_FD_NUM)
@@ -543,7 +537,6 @@ int rdma_post_read(struct rdma_cm_id *id, void *context, void *addr,
     }
 
     id->op_id = wid;
-    // memcpy(addr, id->mr->addr, length);
     return 0;
 }
 

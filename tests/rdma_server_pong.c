@@ -26,11 +26,6 @@ int main(int argc, char* argv[])
     fprintf(stderr, "Params: ip=%s port=%d conns=%d\n", ip, port, num_connections);
 
     rdma_init();
-    /*
-    TODO:
-    rdma_create_id();
-    rdma_reg_mem();
-    */
 
     struct sockaddr_in localaddr, remoteaddr;
     localaddr.sin_family = AF_INET;

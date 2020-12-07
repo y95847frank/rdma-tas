@@ -51,11 +51,6 @@ int main(int argc, char* argv[])
     assert(pending_msgs < WQSIZE);
 
     rdma_init();
-    /*
-    TODO:
-    rdma_create_id();
-    rdma_reg_mem();
-    */
 
     struct sockaddr_in remoteaddr;
     remoteaddr.sin_family = AF_INET;
@@ -118,7 +113,6 @@ int main(int argc, char* argv[])
         iter ++;
         for (int i = 0; i < num_conns; i++)
         {
-            //printf("Start count: %d\n", count[i]);
             int ret = rdma_cq_poll(fd[i], ev, WQSIZE);
             if (ret < 0)
             {
@@ -138,7 +132,6 @@ int main(int argc, char* argv[])
                     return -1;
                 }
             }
-            //printf("ret: %d, Mid count: %d\n", ret, ret+count[i]);
 
             count[i] += ret;
             compl_msgs += ret;
@@ -146,10 +139,6 @@ int main(int argc, char* argv[])
             int j = 0;
             for (j = 0; j < count[i] && write_flag; j++)
             {
-                /*
-                    TODO:
-                    rdma_reg_write();
-                */
                 int ret = rdma_write(fd[i], msg_len, 0+msg_len*j, 0+msg_len*j);
                 if (ret < 0)
                 {
@@ -167,15 +156,10 @@ int main(int argc, char* argv[])
                 printf("Start writing %d msg to server. Msg should be like: %.*s\n", j, msg_len*j, (char*)mr_base[i]);
                 count[i] -= j;
             }
-            //printf("End count: %d\n", count[i]-j);
             
             int k = 0;
             for (k = 0; k < count[i] && !write_flag; k++)
             {
-                /*
-                    TODO:
-                    rdma_reg_read();
-                */
                 int ret = rdma_read(fd[i], msg_len, read_base+msg_len*k, 0+msg_len*k);
                 if (ret < 0)
                 {
@@ -204,9 +188,6 @@ int main(int argc, char* argv[])
             double latency = (total_latency/3000.)/latency_count;
             fprintf(stderr, "Msgs: %lu Bytes: %lu Time: %lf Throughput=%lf Kbps Latency=%lf us\n", compl_msgs, compl_msgs*msg_len, 
                 diff, tpt, latency);
-            
-            // compl_msgs = 0;
-            // start_time = cur_time;
         }
     }
     return 0;
