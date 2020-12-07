@@ -14,6 +14,7 @@
 #define MRSIZE              64*1024
 #define WQSIZE              1024
 
+struct rdma_cm_id ** id;
 int fd[NUM_CONNECTIONS];
 void* mr_base[NUM_CONNECTIONS];
 uint32_t mr_len[NUM_CONNECTIONS];
@@ -49,12 +50,36 @@ int main(int argc, char* argv[])
     assert(msg_len < MRSIZE);
     assert(pending_msgs < WQSIZE);
 
-    rdma_tas_init();
+    //rdma_tas_init();
     struct sockaddr_in remoteaddr;
     remoteaddr.sin_family = AF_INET;
     remoteaddr.sin_addr.s_addr = inet_addr(rip);
     remoteaddr.sin_port = htons(rport);
 
+    id = calloc(NUM_CONNECTIONS, sizeof(struct rdma_cm_id*));
+    for (int i = 0; i < num_conns; i++)
+    {
+        struct rdma_event_channel *ec = rdma_create_event_channel();
+        int ret = rdma_create_id(ec, &id[i], NULL, RDMA_PS_TCP);
+        if (ret < 0)
+        {
+            fprintf(stderr, "Connection failed\n");
+            return -1;
+        }
+        ret = rdma_resolve_addr(id[i], NULL, (struct sockaddr *)&remoteaddr, 1000);
+        if(ret < 0){
+                fprintf(stderr, "Resolve address failed\n");
+                return -1;       
+        }
+        ret = rdma_connect(id[i], NULL);
+        if (ret < 0)
+        {
+            fprintf(stderr, "Connection failed\n");
+            return -1;
+        }
+    }
+
+    /*
     for (int i = 0; i < num_conns; i++)
     {
         fd[i] = rdma_tas_connect(&remoteaddr, &mr_base[i], &mr_len[i]);
@@ -65,6 +90,7 @@ int main(int argc, char* argv[])
             return -1;
         }
     }
+    */
 
     fprintf(stderr, "Connections established: %d\n", num_conns);
     getchar();
@@ -93,35 +119,23 @@ int main(int argc, char* argv[])
         iter ++;
         for (int i = 0; i < num_conns; i++)
         {
-            int ret = rdma_tas_cq_poll(fd[i], ev, WQSIZE);
+            int ret = rdma_cq_poll(id[i]->send_cq_channel->fd, ev, WQSIZE);
             if (ret < 0)
             {
                 fprintf(stderr, "%s():%d\n", __func__, __LINE__);
                 return -1;
             }
-#ifndef NOVERIFY
-            for (int j = 0; j < ret; j++)
-            {
-                if (ev[j].status != RDMA_SUCCESS)
-                {
-                    fprintf(stderr, "%s():%d id=%u status=%u\n", __func__, __LINE__, ev[j].id, ev[j].status);
-                    return -1;
-                }
 
-                if (ev[j].id % 200 == 0)
-                {
-                    total_latency += (rdtsc() - latency[ev[j].id]);
-                    latency_count++;
-                }
-            }
-#endif
+
             count[i] += ret;
             compl_msgs += ret;
 
             int j;
             for (j = 0; j < count[i]; j++)
             {
-                int ret = rdma_tas_write(fd[i], msg_len, 0, 0);
+                uint32_t loff =  msg_len*j;
+                int ret = rdma_post_write(id[i], NULL, &loff, msg_len, NULL, 0, msg_len*j, 0);
+
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
