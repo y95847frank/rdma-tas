@@ -52,7 +52,7 @@ struct rdma_wqe {
  * 
  * @return SUCCESS/FAILURE
  */
-int rdma_init(void);
+int rdma_tas_init(void);
 
 /**
  * Listen to RDMA connections on a TCP port.
@@ -111,7 +111,7 @@ int rdma_tas_connect(const struct sockaddr_in* remoteaddr, void **mr_base, uint3
  *         READ/WRITE calls on the same connection. It may be used to
  *         query the SUCCESS or FAILURE of an operation using completion queue.
  */
-int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
+int rdma_tas_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
 
 /**
  * One-sided communication primitive to write data
@@ -132,7 +132,7 @@ int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
  *         READ/WRITE calls on the same connection. It may be used to
  *         query the SUCCESS or FAILURE of an operation using completion queue.
  */
-int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
+int rdma_tas_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
 
 /**
  * Fetch completion event with the status of a completed operation.
@@ -145,6 +145,6 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset);
  * @return -1 on FAILURE, number of completion events on SUCCESS
  *          Completion events are copied to *compl_evs*.
  */
-int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num);
+int rdma_tas_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num);
 
 #endif /* FLEXTCP_RDMA_H_ */

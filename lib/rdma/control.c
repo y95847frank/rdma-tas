@@ -7,8 +7,8 @@
 
 #include "internal.h"
 
-struct rdma_socket* fdmap[MAX_FD_NUM];
-struct flextcp_context* appctx = NULL;
+struct rdma_socket* rdma_tas_fdmap[MAX_FD_NUM];
+struct flextcp_context* rdma_tas_appctx = NULL;
 
 /**
  * NOTE: As the TAS internal structures will change,
@@ -26,7 +26,7 @@ static int fd_alloc(void)
     int i;
     // Skip 0 to avoid possible confusion
     for (i = 1; i < MAX_FD_NUM; i++)
-        if (fdmap[i] == NULL)
+        if (rdma_tas_fdmap[i] == NULL)
             break;
 
     if (i == MAX_FD_NUM)
@@ -35,7 +35,7 @@ static int fd_alloc(void)
     return i;
 }
 
-int rdma_init(void)
+int rdma_tas_init(void)
 {
     // 1. Connect with TAS
     if (flextcp_init() != 0)
@@ -45,20 +45,20 @@ int rdma_init(void)
     }
 
     // 2. Register app context with TAS
-    appctx = calloc(1, sizeof(struct flextcp_context));
-    if (appctx == NULL)
+    rdma_tas_appctx = calloc(1, sizeof(struct flextcp_context));
+    if (rdma_tas_appctx == NULL)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    if (flextcp_context_create(appctx) != 0)
+    if (flextcp_context_create(rdma_tas_appctx) != 0)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
 
     // 3. Initialize internal datastructures
-    memset(fdmap, 0, sizeof(fdmap));
+    memset(rdma_tas_fdmap, 0, sizeof(rdma_tas_fdmap));
 
     return 0;
 }
@@ -94,7 +94,7 @@ int rdma_tas_listen(const struct sockaddr_in* localaddr, int backlog)
         backlog = LISTEN_BACKLOG_MAX;
 
     // 4. listen() IPC to TAS Slowpath
-    if (flextcp_listen_open(appctx, &s->l,
+    if (flextcp_listen_open(rdma_tas_appctx, &s->l,
             ntohs(localaddr->sin_port), backlog, 0) != 0)
     {
         free(s);
@@ -109,7 +109,7 @@ int rdma_tas_listen(const struct sockaddr_in* localaddr, int backlog)
     while (1)
     {
 	// TODO: Only poll the kernel
-        ret = flextcp_context_poll(appctx, 1, &ev);
+        ret = flextcp_context_poll(rdma_tas_appctx, 1, &ev);
         if (ret < 0)
         {
             free(s);
@@ -120,7 +120,7 @@ int rdma_tas_listen(const struct sockaddr_in* localaddr, int backlog)
         if (ret == 1)
             break;
 
-        flextcp_block(appctx, CONTROL_TIMEOUT);
+        flextcp_block(rdma_tas_appctx, CONTROL_TIMEOUT);
     }
 
     // 6. Check listen() status
@@ -133,9 +133,9 @@ int rdma_tas_listen(const struct sockaddr_in* localaddr, int backlog)
         return -1;
     }
 
-    // 7. Store rdma_socket in fdmap
+    // 7. Store rdma_socket in rdma_tas_fdmap
     s->type = RDMA_LISTEN_SOCKET;
-    fdmap[fd] = s;
+    rdma_tas_fdmap[fd] = s;
 
     return fd;
 }
@@ -149,7 +149,7 @@ int rdma_tas_accept(int listenfd, struct sockaddr_in* remoteaddr,
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct rdma_socket* ls = fdmap[listenfd];
+    struct rdma_socket* ls = rdma_tas_fdmap[listenfd];
 
     // 2. Allocate FD and Socket
     int fd = fd_alloc();
@@ -166,7 +166,7 @@ int rdma_tas_accept(int listenfd, struct sockaddr_in* remoteaddr,
     }
 
     // 3. accept() IPC to TAS Slowpath
-    if (flextcp_listen_accept(appctx, &ls->l, &s->c) != 0)
+    if (flextcp_listen_accept(rdma_tas_appctx, &ls->l, &s->c) != 0)
     {
         free(s);
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -180,7 +180,7 @@ int rdma_tas_accept(int listenfd, struct sockaddr_in* remoteaddr,
     while (1)
     {
 	// TODO: Only poll the kernel
-        ret = flextcp_context_poll(appctx, 1, &ev);
+        ret = flextcp_context_poll(rdma_tas_appctx, 1, &ev);
         if (ret < 0)
         {
             free(s);
@@ -191,7 +191,7 @@ int rdma_tas_accept(int listenfd, struct sockaddr_in* remoteaddr,
         if (ret == 1)
             break;
 
-        flextcp_block(appctx, CONTROL_TIMEOUT);
+        flextcp_block(rdma_tas_appctx, CONTROL_TIMEOUT);
     }
 
     // 5. Check accept() status
@@ -204,9 +204,9 @@ int rdma_tas_accept(int listenfd, struct sockaddr_in* remoteaddr,
         return -1;
     }
 
-    // 6. Store socket in fdmap
+    // 6. Store socket in rdma_tas_fdmap
     s->type = RDMA_CONN_SOCKET;
-    fdmap[fd] = s;
+    rdma_tas_fdmap[fd] = s;
 
     // 7. Update return parameters
     *mr_base = s->c.mr;
@@ -241,7 +241,7 @@ int rdma_tas_connect(const struct sockaddr_in* remoteaddr, void **mr_base,
     }
 
     // 3. connect() IPC to TAS Slowpath
-    if (flextcp_connection_open(appctx, &s->c,
+    if (flextcp_connection_open(rdma_tas_appctx, &s->c,
         ntohl(remoteaddr->sin_addr.s_addr), ntohs(remoteaddr->sin_port)) != 0)
     {
         free(s);
@@ -256,7 +256,7 @@ int rdma_tas_connect(const struct sockaddr_in* remoteaddr, void **mr_base,
     while (1)
     {
 	// TODO: Only poll the kernel
-        ret = flextcp_context_poll(appctx, 1, &ev);
+        ret = flextcp_context_poll(rdma_tas_appctx, 1, &ev);
         if (ret < 0)
         {
             free(s);
@@ -267,7 +267,7 @@ int rdma_tas_connect(const struct sockaddr_in* remoteaddr, void **mr_base,
         if (ret == 1)
             break;
 
-        flextcp_block(appctx, CONTROL_TIMEOUT);
+        flextcp_block(rdma_tas_appctx, CONTROL_TIMEOUT);
     }
 
     // 5. Check accept() status
@@ -280,9 +280,9 @@ int rdma_tas_connect(const struct sockaddr_in* remoteaddr, void **mr_base,
         return -1;
     }
 
-    // 6. Store rdma_socket in fdmap
+    // 6. Store rdma_socket in rdma_tas_fdmap
     s->type = RDMA_CONN_SOCKET;
-    fdmap[fd] = s;
+    rdma_tas_fdmap[fd] = s;
 
     // 7. Update return parameters
     *mr_base = s->c.mr;

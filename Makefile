@@ -36,10 +36,10 @@ FASTPATH_OBJS = $(addprefix tas/fast/,fastemu.o network.o \
 		    qman.o trace.o fast_kernel.o fast_appctx.o fast_flows.o \
 			fast_rdma.o)
 STACK_OBJS = $(addprefix lib/tas/,init.o kernel.o conn.o connect.o)
-SOCKETS_OBJS = $(addprefix lib/sockets/,transfer.o context.o manage_fd.o \
+SOCKETS_OBJS = $(addprefix lib/sockets/,control.o transfer.o context.o manage_fd.o \
 	epoll.o libc.o)
 INTERPOSE_OBJS = $(addprefix lib/sockets/,interpose.o)
-RDMA_OBJS = $(addprefix lib/rdma/,rdma_verbs.o)
+RDMA_OBJS = $(addprefix lib/rdma/,control.o dataops.o rdma_verbs.o)
 
 CFLAGS += -I. -Ilib/tas/include -Ilib/rdma/include
 

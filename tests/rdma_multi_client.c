@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     assert(msg_len < MRSIZE);
     assert(pending_msgs < WQSIZE);
 
-    rdma_init();
+    rdma_tas_init();
     struct sockaddr_in remoteaddr;
     remoteaddr.sin_family = AF_INET;
     remoteaddr.sin_addr.s_addr = inet_addr(rip);
@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
         iter ++;
         for (int i = 0; i < num_conns; i++)
         {
-            int ret = rdma_cq_poll(fd[i], ev, WQSIZE);
+            int ret = rdma_tas_cq_poll(fd[i], ev, WQSIZE);
             if (ret < 0)
             {
                 fprintf(stderr, "%s():%d\n", __func__, __LINE__);
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
             int j;
             for (j = 0; j < count[i]; j++)
             {
-                int ret = rdma_write(fd[i], msg_len, 0, 0);
+                int ret = rdma_tas_write(fd[i], msg_len, 0, 0);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
