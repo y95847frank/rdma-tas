@@ -21,7 +21,7 @@ struct flextcp_context* rdma_tas_appctx = NULL;
  *      going to help in resue of code.
  */
 
-static int fd_alloc(void)
+static int fd_tas_alloc(void)
 {
     int i;
     // Skip 0 to avoid possible confusion
@@ -74,7 +74,7 @@ int rdma_tas_listen(const struct sockaddr_in* localaddr, int backlog)
     }
 
     // 2. Allocate FD and Socket
-    int fd = fd_alloc();
+    int fd = fd_tas_alloc();
     if (fd == -1)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -152,7 +152,7 @@ int rdma_tas_accept(int listenfd, struct sockaddr_in* remoteaddr,
     struct rdma_socket* ls = rdma_tas_fdmap[listenfd];
 
     // 2. Allocate FD and Socket
-    int fd = fd_alloc();
+    int fd = fd_tas_alloc();
     if (fd == -1)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -227,7 +227,7 @@ int rdma_tas_connect(const struct sockaddr_in* remoteaddr, void **mr_base,
     }
 
     // 2. Allocate FD and Socket
-    int fd = fd_alloc();
+    int fd = fd_tas_alloc();
     if (fd == -1)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
