@@ -24,7 +24,7 @@ int main()
         fprintf(stderr, "Connection failed\n");
         return -1;
     }
-    struct sockaddr_in localaddr, remoteaddr;
+    struct sockaddr_in localaddr;
     localaddr.sin_family = AF_INET;
     localaddr.sin_addr.s_addr = inet_addr(ip);
     localaddr.sin_port = htons(5005);
@@ -68,7 +68,7 @@ int main()
 
         int len = snprintf(new_mr_base, 100, "%s%u", name, i);
         //int ret = rdma_tas_write(fd, len, new_mr_base - (char*) mr_base, new_mr_base - (char*) mr_base);
-        int ret = rdma_post_write(id[0], NULL, &(new_mr_base - (char*) mr_base), len, NULL, 0, new_mr_base - (char*) mr_base, 0);
+        int ret = rdma_post_write(id[0], NULL, &new_mr_base - (char*) mr_base, len, NULL, 0, new_mr_base - (char*) mr_base, 0);
         new_mr_base += len;
         fprintf(stderr, "WRITE ret=%d\n", ret);
         if (ret >= 0)
