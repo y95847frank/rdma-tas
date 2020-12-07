@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
                 printf("Current mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)mr_base[i]);
                 
                 stopCount += 1;
-                if (stopCount > 5) {
+                if (stopCount > 3) {
                     return -1;
                 }
 
