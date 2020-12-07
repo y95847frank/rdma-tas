@@ -20,7 +20,7 @@ int main()
   remoteaddr.sin_port = htons(5005);
 
   void *mr_base;
-  uint32_t mr_len;
+  uint32_t mr_len = 4;
   mr_base = malloc(mr_len);
 
   id = calloc(1, sizeof(struct rdma_cm_id*));
