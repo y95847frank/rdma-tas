@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < num_conns; i++)
     {
         memcpy(mr_base[i], mr_base[0], mr_len[0]);
-        memcpy(id[i]->mr->addr, mr_base[0], mr_len[0]);
+        memcpy(id[i]->mr->addr, mr_base[i], mr_len[0]);
         count[i] = pending_msgs;
     }
     
@@ -145,9 +145,15 @@ int main(int argc, char* argv[])
                     printf("Finished Write!\n");
                 }
                 printf("Current mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)id[i]->mr->addr);
+
                 stopCount += 1;
                 if (stopCount > 5) {
                     return -1;
+                }
+
+                if(!write_flag){
+                    memcpy(id[i]->mr->addr, mr_base[i], mr_len[0]);
+                    printf("Reset memory to start a new write, current mem %.*s:\n", read_base*4, (char*)id[i]->mr->addr);
                 }
             }
 
