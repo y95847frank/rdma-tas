@@ -11,7 +11,7 @@
  * 'fd'
  */
 
-int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
+int rdma_tas_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
 {
     // 1. Find listener socket
     if (fd < 1 || fd >= MAX_FD_NUM)
@@ -70,7 +70,7 @@ int rdma_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     return id;
 }
 
-int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
+int rdma_tas_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
 {
     // 1. Find listener socket
     if (fd < 1 || fd >= MAX_FD_NUM)
@@ -130,7 +130,7 @@ int rdma_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
     return id;
 }
 
-int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
+int rdma_tas_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
     int ret;
     if (fd < 1 || fd >= MAX_FD_NUM)
     {

@@ -9,7 +9,7 @@
 int main()
 {
   const char ip[] = "10.0.0.101";
-  rdma_init();
+  rdma_tas_init();
   struct sockaddr_in remoteaddr;
   remoteaddr.sin_family = AF_INET;
   remoteaddr.sin_addr.s_addr = inet_addr(ip);
