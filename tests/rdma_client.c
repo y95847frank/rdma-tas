@@ -36,7 +36,7 @@ int main()
           fprintf(stderr, "Resolve address failed\n");
           return -1;       
   }
-  ret = rdma_connect(id[i], NULL);
+  ret = rdma_connect(id[0], NULL);
   if (ret < 0)
   {
       fprintf(stderr, "Connection failed\n");
