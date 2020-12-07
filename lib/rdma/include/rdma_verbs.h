@@ -229,6 +229,19 @@ struct rdma_cm_join_mc_attr_ex {
 };
 
 /**
+ * RDMA Work/Completion Queue Entry
+ */
+struct rdma_wqe {
+    uint32_t id;  /**> Operation ID returned in RDMA read()/write() call */
+    uint8_t type;
+    uint8_t status;
+    uint16_t flags;
+    uint32_t loff;  /**> Local offset */
+    uint32_t roff;  /**> Remote offset */
+    uint32_t len;
+} __attribute__((packed));
+
+/**
  * rdma_create_event_channel - Open a channel used to report communication events.
  * Description:
  *   Asynchronous events are reported to users through event channels.  Each
