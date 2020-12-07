@@ -38,7 +38,7 @@
 #include <sys/socket.h>
 #include "ibv_verbs.h"
 #include <errno.h>
-
+#include "tas_rdma.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -752,7 +752,7 @@ int rdma_post_write(struct rdma_cm_id *id, void *context, void *addr,
 		size_t length, struct ibv_mr *mr, int flags,
 		uint64_t remote_addr, uint32_t rkey);
 
-
+int rdma_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num);
 #ifdef __cplusplus
 }
 #endif
