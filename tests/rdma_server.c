@@ -15,10 +15,10 @@ struct rdma_wqe ev[WQSIZE];
 int main()
 {
     const char ip[] = "10.0.0.101";
-    id = calloc(1, sizeof(struct rdma_cm_id*));
     struct rdma_event_channel *ec = rdma_create_event_channel();
-    int ret = rdma_create_id(ec, &id[0], NULL, RDMA_PS_TCP);
-
+    struct rdma_cm_id * listen_id;
+    rdma_create_id(ec, &listen_id, NULL, RDMA_PS_TCP);
+    
     if (ret < 0)
     {
         fprintf(stderr, "Connection failed\n");
@@ -42,6 +42,7 @@ int main()
             fprintf(stderr, "Accept failed\n");
             return -1;       
     }
+    
     id = calloc(1, sizeof(struct rdma_cm_id*));
     for (int i = 0; i < 1; i++)
     {
