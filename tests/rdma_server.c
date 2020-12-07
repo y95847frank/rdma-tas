@@ -19,11 +19,6 @@ int main()
     struct rdma_cm_id * listen_id;
     rdma_create_id(ec, &listen_id, NULL, RDMA_PS_TCP);
     
-    if (ret < 0)
-    {
-        fprintf(stderr, "Connection failed\n");
-        return -1;
-    }
     struct sockaddr_in localaddr;
     localaddr.sin_family = AF_INET;
     localaddr.sin_addr.s_addr = inet_addr(ip);
@@ -31,7 +26,7 @@ int main()
 
     void *mr_base;
     uint32_t mr_len;
-    struct rdma_cm_id * listen_id;
+
     ret = rdma_bind_addr(listen_id, (struct sockaddr *)&localaddr);
     if(ret < 0){
             fprintf(stderr, "Bind failed\n");
@@ -42,7 +37,7 @@ int main()
             fprintf(stderr, "Accept failed\n");
             return -1;       
     }
-    
+
     id = calloc(1, sizeof(struct rdma_cm_id*));
     for (int i = 0; i < 1; i++)
     {
@@ -69,7 +64,7 @@ int main()
 
         int len = snprintf(new_mr_base, 100, "%s%u", name, i);
         //int ret = rdma_tas_write(fd, len, new_mr_base - (char*) mr_base, new_mr_base - (char*) mr_base);
-        int ret = rdma_post_write(id[0], NULL, new_mr_base - (char*) mr_base, len, NULL, 0, new_mr_base - (char*) mr_base, 0);
+        int ret = rdma_post_write(id[0], NULL, 0, len, NULL, 0, 0, 0);
         new_mr_base += len;
         fprintf(stderr, "WRITE ret=%d\n", ret);
         if (ret >= 0)
