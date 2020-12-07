@@ -31,8 +31,8 @@ int main()
 
     void *mr_base;
     uint32_t mr_len;
-
-    int ret = rdma_bind_addr(listen_id, (struct sockaddr *)&localaddr);
+    struct rdma_cm_id * listen_id;
+    ret = rdma_bind_addr(listen_id, (struct sockaddr *)&localaddr);
     if(ret < 0){
             fprintf(stderr, "Bind failed\n");
             return -1;       
@@ -68,7 +68,7 @@ int main()
 
         int len = snprintf(new_mr_base, 100, "%s%u", name, i);
         //int ret = rdma_tas_write(fd, len, new_mr_base - (char*) mr_base, new_mr_base - (char*) mr_base);
-        int ret = rdma_post_write(id[0], NULL, new_mr_base - (char*) mr_base, len, NULL, 0, new_mr_base - (char*) mr_base, 0);
+        int ret = rdma_post_write(id[0], NULL, &(new_mr_base - (char*) mr_base), len, NULL, 0, new_mr_base - (char*) mr_base, 0);
         new_mr_base += len;
         fprintf(stderr, "WRITE ret=%d\n", ret);
         if (ret >= 0)
@@ -80,9 +80,9 @@ int main()
             break;
         int j;
         for(j = 0; j < ret; j++){
-            if(cqe[j].status != RDMA_SUCCESS){
+            if(ev[j].status != RDMA_SUCCESS){
                 fprintf(stderr, "RDMA_STATUS: id=%d, status=%d\n",
-                        cqe[j].id, cqe[j].status);
+                        ev[j].id, ev[j].status);
                 return -1;
             }
         }
