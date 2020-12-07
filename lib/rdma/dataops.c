@@ -19,7 +19,7 @@ int rdma_tas_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct rdma_socket* s = fdmap[fd];
+    struct rdma_socket* s = rdma_tas_fdmap[fd];
     if (s->type != RDMA_CONN_SOCKET)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -60,7 +60,7 @@ int rdma_tas_read(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
 
     // TODO: Handle the case where bump queue is full
     // 6. Bump the fast path
-    if (rdma_conn_bump(appctx, c) < 0) {
+    if (rdma_conn_bump(rdma_tas_appctx, c) < 0) {
         // Undo the length increment (effectively revert adding wqe)
 		c->wq_len = old_len;
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -78,7 +78,7 @@ int rdma_tas_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct rdma_socket* s = fdmap[fd];
+    struct rdma_socket* s = rdma_tas_fdmap[fd];
     if (s->type != RDMA_CONN_SOCKET)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -120,7 +120,7 @@ int rdma_tas_write(int fd, uint32_t len, uint32_t loffset, uint32_t roffset)
 
     // TODO: Handle the case where bump queue is full
     // 6. Bump the fast path
-    if (rdma_conn_bump(appctx, c) < 0) {
+    if (rdma_conn_bump(rdma_tas_appctx, c) < 0) {
         // Undo the length increment (effectively revert adding wqe)
 		c->wq_len = old_len;
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -137,7 +137,7 @@ int rdma_tas_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
         return -1;
     }
-    struct rdma_socket* s = fdmap[fd];
+    struct rdma_socket* s = rdma_tas_fdmap[fd];
     if (s->type != RDMA_CONN_SOCKET)
     {
         fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
@@ -146,7 +146,7 @@ int rdma_tas_cq_poll(int fd, struct rdma_wqe* compl_evs, uint32_t num){
     struct flextcp_connection* c = &s->c;
     if (c->cq_len < num * sizeof(struct rdma_wqe))
     {
-        ret = rdma_fastpath_poll(appctx, c, num * sizeof(struct rdma_wqe));
+        ret = rdma_fastpath_poll(rdma_tas_appctx, c, num * sizeof(struct rdma_wqe));
         if (ret < 0){
             fprintf(stderr, "[ERROR] %s():%u failed\n", __func__, __LINE__);
             return -1;
