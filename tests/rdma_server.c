@@ -68,7 +68,7 @@ int main()
 
         int len = snprintf(new_mr_base, 100, "%s%u", name, i);
         //int ret = rdma_tas_write(fd, len, new_mr_base - (char*) mr_base, new_mr_base - (char*) mr_base);
-        int ret = rdma_post_write(id[0], NULL, &new_mr_base - (char*) mr_base, len, NULL, 0, new_mr_base - (char*) mr_base, 0);
+        int ret = rdma_post_write(id[0], NULL, new_mr_base - (char*) mr_base, len, NULL, 0, new_mr_base - (char*) mr_base, 0);
         new_mr_base += len;
         fprintf(stderr, "WRITE ret=%d\n", ret);
         if (ret >= 0)
