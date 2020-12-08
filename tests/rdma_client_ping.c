@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <time.h>
 #include <tas_rdma.h>
+#include <rdma_verbs.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
@@ -15,7 +16,7 @@
 #define MRSIZE              64*1024
 #define WQSIZE              1024
 
-int fd[NUM_CONNECTIONS];
+struct rdma_cm_id ** id;
 void* mr_base[NUM_CONNECTIONS];
 uint32_t mr_len[NUM_CONNECTIONS];
 int count[NUM_CONNECTIONS];
@@ -50,18 +51,28 @@ int main(int argc, char* argv[])
     assert(msg_len < MRSIZE);
     assert(pending_msgs < WQSIZE);
 
-    rdma_tas_init();
-
     struct sockaddr_in remoteaddr;
     remoteaddr.sin_family = AF_INET;
     remoteaddr.sin_addr.s_addr = inet_addr(rip);
     remoteaddr.sin_port = htons(rport);
     
+    id = calloc(NUM_CONNECTIONS, sizeof(struct rdma_cm_id*));
     for (int i = 0; i < num_conns; i++)
     {
-        fd[i] = rdma_tas_connect(&remoteaddr, &mr_base[i], &mr_len[i]);
-
-        if (fd[i] < 0)
+        struct rdma_event_channel *ec = rdma_create_event_channel();
+        int ret = rdma_create_id(ec, &id[i], NULL, RDMA_PS_TCP);
+        if (ret < 0)
+        {
+            fprintf(stderr, "Connection failed\n");
+            return -1;
+        }
+        ret = rdma_resolve_addr(id[i], NULL, (struct sockaddr *)&remoteaddr, 1000);
+        if(ret < 0){
+                fprintf(stderr, "Resolve address failed\n");
+                return -1;       
+        }
+        ret = rdma_connect(id[i], NULL);
+        if (ret < 0)
         {
             fprintf(stderr, "Connection failed\n");
             return -1;
@@ -73,6 +84,12 @@ int main(int argc, char* argv[])
     getchar();
 
     fprintf(stderr, "Pinging %s with %d of data:\n", rip, msg_len);
+
+    for(int i = 0; i < num_conns; i++){
+        // Init local buffer
+        mr_len[i] = id[i]->mr->length;
+        mr_base[i] = malloc(mr_len[i]);
+    }
     
     char* c = mr_base[0];
     char f = 'a';
@@ -92,11 +109,12 @@ int main(int argc, char* argv[])
         c++;
     }
     printf("mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)mr_base[0]);
-
+    
     count[0] = pending_msgs;
-    for (int i = 1; i < num_conns; i++)
+    for (int i = 0; i < num_conns; i++)
     {
         memcpy(mr_base[i], mr_base[0], mr_len[0]);
+        memcpy(id[i]->mr->addr, mr_base[i], mr_len[0]);
         count[i] = pending_msgs;
     }
     
@@ -113,7 +131,7 @@ int main(int argc, char* argv[])
         iter ++;
         for (int i = 0; i < num_conns; i++)
         {
-            int ret = rdma_tas_cq_poll(fd[i], ev, WQSIZE);
+            int ret = rdma_cq_poll(id[i]->send_cq_channel->fd, ev, WQSIZE);
             if (ret < 0)
             {
                 fprintf(stderr, "%s():%d\n", __func__, __LINE__);
@@ -126,8 +144,8 @@ int main(int argc, char* argv[])
                 else {
                     printf("Finished Write!\n");
                 }
-                printf("Current mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)mr_base[i]);
-                
+                printf("Current mem size %d, mem: %.*s\n", mr_len[0], read_base*4, (char*)id[i]->mr->addr);
+
                 stopCount += 1;
                 if (stopCount > 3) {
                     return -1;
@@ -137,7 +155,6 @@ int main(int argc, char* argv[])
                     memcpy(id[i]->mr->addr, mr_base[i], mr_len[0]);
                     printf("\nReset memory to start a new write, current mem: %.*s\n", read_base*4, (char*)id[i]->mr->addr);
                 }
-
             }
 
             count[i] += ret;
@@ -146,16 +163,22 @@ int main(int argc, char* argv[])
             int j = 0;
             for (j = 0; j < count[i] && write_flag; j++)
             {
-                int ret = rdma_tas_write(fd[i], msg_len, 0+msg_len*j, 0+msg_len*j);
+                /*
+                    TODO:
+                    rdma_reg_write();
+                */
+                uint32_t loff =  msg_len*j;
+                int ret = rdma_post_write(id[i], NULL, &loff, msg_len, NULL, 0, msg_len*j, 0);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
                     return -1;
                 }
+                int ret_val = id[i]->op_id;
 
-                if (ret % 200 == 0)
+                if (ret_val % 200 == 0)
                 {
-                    latency[ret] = rdtsc();
+                    latency[ret_val] = rdtsc();
                 }
             }
             if (j > 0) {
@@ -167,16 +190,22 @@ int main(int argc, char* argv[])
             int k = 0;
             for (k = 0; k < count[i] && !write_flag; k++)
             {
-                int ret = rdma_tas_read(fd[i], msg_len, read_base+msg_len*k, 0+msg_len*k);
+                /*
+                    TODO:
+                    rdma_reg_read();
+                */
+                uint32_t loff = read_base+msg_len*k;
+                int ret = rdma_post_read(id[i], NULL, &loff, 
+                                        msg_len, NULL, 0, msg_len *k, 0);
                 if (ret < 0)
                 {
                     fprintf(stderr, "%s():%d\n", __func__, __LINE__);
                     return -1;
                 }
-
-                if (ret % 200 == 0)
+                int ret_val = id[i]->op_id;
+                if (ret_val % 200 == 0)
                 {
-                    latency[ret] = rdtsc();
+                    latency[ret_val] = rdtsc();
                 }
             }
             
