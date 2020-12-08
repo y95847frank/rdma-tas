@@ -137,12 +137,12 @@ sudo tests/rdma_multi_server 10.0.0.1 10000 1
 ```
 As for the client machine, we can run this command to test and evaluate RDMA Write.
 ```
-sudo tests/rdma_multi_client_write 10.0.0.1 10000 1 4 5
+sudo tests/rdma_multi_client_write 10.0.0.1 10000 1 64 5
 ```
 ### RDMA Read:
 We can use the same method as RDMA Write to initiate the server. For the client machine, we can run this command to test and evaluate RDMA Read.
 ```
-sudo tests/rdma_multi_client_read 10.0.0.1 10000 1 4 5
+sudo tests/rdma_multi_client_read 10.0.0.1 10000 1 64 5
 ```
 
 ## Code Structure
