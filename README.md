@@ -48,6 +48,33 @@ sockets interposition run as follows (for example):
 sudo LD_PRELOAD=lib/libtas_interpose.so ../benchmarks/micro_rpc/echoserver_linux 1234 1 foo 8192 1
 ```
 
+## RDMA Testing
+
+First, run `make tests` to compile testing programs. When tas runs in two machine, we can run test for RDMA_PingPong, RDMA_Write, and RDMA_Read. 
+### RDMA Ping Pong
+In the server machine, we run this comand to start listening to ping from the client.
+```
+sudo tests/rdma_server_pong 10.0.0.1 10000 1
+```
+Then, in the client side, we execute this command to ping the server using RDMA Read and RDMA Write iteratively.
+```
+sudo tests/rdma_client_ping 10.0.0.1 10000 1 4 5
+```
+### RDMA Write:
+In the server machine, we run this command to start RDMA server.
+```
+sudo tests/rdma_multi_server 10.0.0.1 10000 1
+```
+As for the client machine, we can run this command to test RDMA Write.
+```
+sudo tests/rdma_multi_client_write 10.0.0.1 10000 1 4 5
+```
+### RDMA Read:
+We can use the same method as RDMA Write to initiate the server. For the client machine, we can run this command to test RDMA Read.
+```
+sudo tests/rdma_multi_client_read 10.0.0.1 10000 1 4 5
+```
+
 ### In Qemu/KVM
 
 For functional testing and development TAS can run in Qemu (with or without
