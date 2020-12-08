@@ -63,7 +63,7 @@ TESTS= \
 	tests/rdma_client \
 	tests/rdma_server \
 	tests/rdma_multi_server \
-	tests/rdma_multi_client \
+	tests/rdma_multi_client_write \
 	tests/rdma_multi_client_read \
 	$(TESTS_AUTO) \
 	$(TESTS_AUTO_FULL)\
